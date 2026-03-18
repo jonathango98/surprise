@@ -333,8 +333,24 @@ async function initCamera() {
 
     const preview = $('camera-preview');
     preview.srcObject = state.mediaStream;
-    preview.style.transform = state.facingMode === 'user' ? 'scaleX(-1)' : 'none';
     await preview.play();
+
+    // Some devices (iOS) return a landscape stream regardless of constraints.
+    // If so, rotate 90° so it fills the portrait viewport correctly.
+    const { videoWidth, videoHeight } = preview;
+    const isLandscapeStream = videoWidth > videoHeight;
+    const mirror = state.facingMode === 'user' ? ' scaleX(-1)' : '';
+    if (isLandscapeStream) {
+      preview.style.width = '100vh';
+      preview.style.height = '100vw';
+      preview.style.transform = `rotate(90deg) translateX(-100%)${mirror}`;
+      preview.style.transformOrigin = 'top left';
+    } else {
+      preview.style.width = '';
+      preview.style.height = '';
+      preview.style.transform = mirror.trim() || 'none';
+      preview.style.transformOrigin = '';
+    }
 
     // Reset UI
     $('btn-record').style.display = 'flex';
