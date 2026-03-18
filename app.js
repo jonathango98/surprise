@@ -217,66 +217,51 @@ function renderDashboard() {
   PROMPTS.forEach((prompt) => {
     const n = prompt.n;
     const completed = completedPrompts.includes(n);
-    const unlocked = n === 1 || completedPrompts.includes(n - 1);
 
     const card = document.createElement('div');
-    card.className = `card${completed ? ' completed' : ''}${!unlocked ? ' locked' : ''}`;
-
-    let icon = '🔒';
-    if (completed) icon = '✅';
-    else if (unlocked) icon = '🎥';
+    card.className = `card${completed ? ' completed' : ''}`;
 
     let metaHtml = '';
     if (completed && timestamps && timestamps[n]) {
       const hrs = Math.floor((Date.now() - new Date(timestamps[n]).getTime()) / 3600000);
       const agoStr = hrs < 1 ? 'just now' : hrs === 1 ? '1 hr ago' : `${hrs} hrs ago`;
       metaHtml = `<div class="card-meta">Recorded ${agoStr}</div>`;
-    } else if (!unlocked) {
-      metaHtml = `<div class="card-meta">Complete prompt ${n - 1} first</div>`;
     }
 
     card.innerHTML = `
-      <div class="card-icon">${icon}</div>
+      <div class="card-icon">${completed ? '✅' : '🎥'}</div>
       <div class="card-content">
         <div class="card-title">Prompt ${n}</div>
         <div class="card-subtitle">${prompt.text}</div>
         ${metaHtml}
       </div>
-      <div class="card-arrow">${unlocked ? '›' : ''}</div>
+      <div class="card-arrow">›</div>
     `;
 
-    if (unlocked) {
-      card.addEventListener('click', () => handlePromptCardTap(n, completed));
-    }
-
+    card.addEventListener('click', () => handlePromptCardTap(n, completed));
     container.appendChild(card);
   });
 
-  // Photo card (unlocks after all 4 prompts)
-  const allVideoDone = [1, 2, 3, 4].every(n => completedPrompts.includes(n));
+  // Photo card (always unlocked)
   const photoCompleted = (photoCount || 0) > 0;
-  const photoUnlocked = allVideoDone;
 
   const photoCard = document.createElement('div');
-  photoCard.className = `card${photoCompleted ? ' completed' : ''}${!photoUnlocked ? ' locked' : ''}`;
+  photoCard.className = `card${photoCompleted ? ' completed' : ''}`;
   photoCard.innerHTML = `
-    <div class="card-icon">${photoCompleted ? '✅' : photoUnlocked ? '📸' : '🔒'}</div>
+    <div class="card-icon">${photoCompleted ? '✅' : '📸'}</div>
     <div class="card-content">
       <div class="card-title">Photos with Sharon</div>
       <div class="card-subtitle">Share your favourite moments</div>
       ${photoCompleted ? `<div class="card-meta">${photoCount} photo${photoCount !== 1 ? 's' : ''} uploaded</div>` : ''}
-      ${!photoUnlocked ? '<div class="card-meta">Complete all prompts first</div>' : ''}
     </div>
-    <div class="card-arrow">${photoUnlocked ? '›' : ''}</div>
+    <div class="card-arrow">›</div>
   `;
 
-  if (photoUnlocked) {
-    photoCard.addEventListener('click', () => showPhotos());
-  }
-
+  photoCard.addEventListener('click', () => showPhotos());
   container.appendChild(photoCard);
 
   // Show celebration button once all 4 video prompts done
+  const allVideoDone = [1, 2, 3, 4].every(n => completedPrompts.includes(n));
   $('btn-all-done').style.display = allVideoDone ? 'flex' : 'none';
 }
 
@@ -763,6 +748,16 @@ function launchConfetti() {
       setTimeout(() => p.remove(), 4000);
     }, i * 15);
   }
+}
+
+// =============================================
+// LOGOUT
+// =============================================
+function logout() {
+  stopMediaStream();
+  state.session = null;
+  localStorage.removeItem('sharon_session');
+  showScreen('screen-form');
 }
 
 // =============================================
