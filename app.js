@@ -333,11 +333,12 @@ async function initCamera() {
 
     const preview = $('camera-preview');
     preview.srcObject = state.mediaStream;
-    preview.style.transform = state.facingMode === 'user' ? 'scaleX(-1)' : 'none';
-    preview.style.width = '';
-    preview.style.height = '';
-    preview.style.transformOrigin = '';
     await preview.play();
+    await new Promise(resolve => {
+      if (preview.videoWidth) return resolve();
+      preview.addEventListener('loadedmetadata', resolve, { once: true });
+    });
+    applyPreviewOrientation(preview);
 
     // Reset UI
     $('btn-record').style.display = 'flex';
@@ -354,6 +355,31 @@ async function initCamera() {
       showError('Could not access camera: ' + e.message);
       showDashboard();
     }
+  }
+}
+
+function applyPreviewOrientation(preview) {
+  const mirror = state.facingMode === 'user';
+  if (preview.videoWidth > preview.videoHeight) {
+    // Landscape stream — rotate 90° so it fills portrait screen
+    preview.style.position = 'absolute';
+    preview.style.width = '100vh';
+    preview.style.height = '100vw';
+    preview.style.top = '50%';
+    preview.style.left = '50%';
+    preview.style.right = 'auto';
+    preview.style.bottom = 'auto';
+    preview.style.objectFit = 'cover';
+    preview.style.transform = `translate(-50%, -50%) rotate(90deg)${mirror ? ' scaleX(-1)' : ''}`;
+  } else {
+    preview.style.width = '';
+    preview.style.height = '';
+    preview.style.top = '';
+    preview.style.left = '';
+    preview.style.right = '';
+    preview.style.bottom = '';
+    preview.style.objectFit = '';
+    preview.style.transform = mirror ? 'scaleX(-1)' : 'none';
   }
 }
 
