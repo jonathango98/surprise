@@ -28,6 +28,7 @@ const state = {
   timerInterval: null,
   playbackUrl: null,
   photoFiles: [],
+  facingMode: 'user',
 };
 
 // =============================================
@@ -322,9 +323,9 @@ async function initCamera() {
 
     state.mediaStream = await navigator.mediaDevices.getUserMedia({
       video: {
-        width: { ideal: 720 },
-        height: { ideal: 1280 },
-        facingMode: 'user',
+        width: { ideal: 1080 },
+        height: { ideal: 1920 },
+        facingMode: state.facingMode,
         aspectRatio: { ideal: 9 / 16 },
       },
       audio: true,
@@ -332,6 +333,7 @@ async function initCamera() {
 
     const preview = $('camera-preview');
     preview.srcObject = state.mediaStream;
+    preview.style.transform = state.facingMode === 'user' ? 'scaleX(-1)' : 'none';
     await preview.play();
 
     // Reset UI
@@ -466,6 +468,12 @@ function cancelRecording() {
   cleanupOrientationCheck();
   stopMediaStream();
   showDashboard();
+}
+
+async function swapCamera() {
+  if (state.mediaRecorder && state.mediaRecorder.state === 'recording') return;
+  state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
+  await initCamera();
 }
 
 // =============================================
