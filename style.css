@@ -795,6 +795,9 @@ h3 {
 .admin-layout {
   min-height: 100vh;
   background: var(--bg);
+}
+
+body:has(.admin-layout) {
   overflow-y: auto;
 }
 
