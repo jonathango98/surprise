@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f0f1a">
+  <title>Sharon's Birthday 🎂</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============================================
+       OVERLAYS (z-index 200+)
+       ============================================ -->
+
+  <!-- Oath Overlay -->
+  <div id="overlay-oath" class="overlay">
+    <div class="popup">
+      <div style="font-size:2rem;margin-bottom:0.75rem;">🤫</div>
+      <h2>Before you continue...</h2>
+      <p>Do you solemnly swear that you are <strong>NOT Sharon</strong>, and that you will not, under any circumstances, tell Sharon about this?</p>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        <button class="btn btn-primary" onclick="swear()">I swear! 🤞</button>
+        <button class="btn btn-secondary" onclick="iAmSharon()">I am Sharon 😅</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Retake Warning Overlay -->
+  <div id="overlay-retake" class="overlay">
+    <div class="popup">
+      <div style="font-size:2rem;margin-bottom:0.75rem;">⚠️</div>
+      <h2>Re-record this prompt?</h2>
+      <p>Re-recording this prompt will delete your previous clip. Continue?</p>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="cancelRetake()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmRetake()">Yes, retake</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rotate Phone Overlay -->
+  <div id="overlay-rotate" class="overlay" style="z-index:300;">
+    <div class="rotate-icon">📱</div>
+    <h2>Rotate your phone</h2>
+    <p class="muted">Please hold your phone upright<br>to record a portrait video</p>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="overlay-loading" class="overlay" style="z-index:400;">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading...</div>
+  </div>
+
+  <!-- Confetti Container -->
+  <div id="confetti-container"></div>
+
+  <!-- Error Toast -->
+  <div id="error-toast"></div>
+
+
+  <!-- ============================================
+       SCREENS
+       ============================================ -->
+
+  <!-- SCREEN: Desktop Block -->
+  <div id="screen-desktop" class="screen">
+    <div class="page-center">
+      <span class="emoji-big">📱</span>
+      <h1>Open on your phone</h1>
+      <p class="muted" style="margin-top:0.5rem;">Please open this link on your phone to record your message for Sharon.</p>
+    </div>
+  </div>
+
+  <!-- SCREEN: Submissions Closed -->
+  <div id="screen-closed" class="screen">
+    <div class="page-center">
+      <span class="emoji-big">🔒</span>
+      <h1>Submissions Closed</h1>
+      <p class="muted" style="margin-top:0.5rem;">The deadline has passed. Thank you to everyone who contributed!</p>
+    </div>
+  </div>
+
+  <!-- SCREEN: Camera Permission Denied -->
+  <div id="screen-camera-denied" class="screen">
+    <div class="page-center">
+      <div class="camera-denied-card">
+        <div style="font-size:2.5rem;margin-bottom:1rem;">🎥</div>
+        <h2>Camera Access Needed</h2>
+        <p class="muted" style="margin:0.75rem 0 1.5rem;">We need camera access to record your message. Please enable it in your browser settings, then refresh the page.</p>
+        <button class="btn btn-secondary" onclick="showDashboard()">← Back to Dashboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Registration Form -->
+  <div id="screen-form" class="screen">
+    <div class="page" style="justify-content:center;">
+      <div class="form-header">
+        <div class="logo">🎂</div>
+        <h1>Sharon's Birthday!</h1>
+        <p class="muted">Leave a message for the birthday girl</p>
+      </div>
+
+      <div class="field">
+        <label>First Name</label>
+        <input id="input-firstname" class="input" type="text" placeholder="e.g. Jane" autocomplete="given-name">
+      </div>
+      <div class="field">
+        <label>Last Name</label>
+        <input id="input-lastname" class="input" type="text" placeholder="e.g. Smith" autocomplete="family-name">
+      </div>
+      <div class="field">
+        <label>Location</label>
+        <input id="input-location" class="input" type="text" placeholder="e.g. Jakarta, Indonesia" autocomplete="off">
+      </div>
+
+      <button class="btn btn-primary" style="margin-top:0.5rem;" onclick="submitForm()">Let's go! 🎉</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Dashboard -->
+  <div id="screen-dashboard" class="screen">
+    <div class="page">
+      <div class="dashboard-header">
+        <h1 id="dashboard-greeting">Hey there! 👋</h1>
+        <p class="dashboard-subtitle">Tap a card to record your message</p>
+      </div>
+
+      <div id="cards-container" class="cards-list"></div>
+
+      <div class="dashboard-footer" id="dashboard-footer">
+        <button id="btn-all-done" class="btn btn-primary" onclick="showThankyou()" style="display:none;">
+          🎉 See your celebration!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Recording -->
+  <div id="screen-recording" class="screen">
+    <video id="camera-preview" playsinline muted autoplay></video>
+
+    <div class="recording-ui">
+      <div class="recording-top">
+        <button class="recording-back" onclick="cancelRecording()">← Cancel</button>
+        <div id="recording-prompt-label" class="recording-label">Prompt 1 of 4</div>
+        <div id="recording-prompt-text" class="recording-prompt">Prompt goes here</div>
+      </div>
+
+      <div class="recording-bottom">
+        <div id="recording-timer">10s</div>
+        <div class="record-controls">
+          <div id="btn-record" onclick="startRecording()">
+            <div class="record-dot"></div>
+          </div>
+          <button id="btn-stop" onclick="stopRecording()">Stop Early</button>
+        </div>
+        <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;" id="recording-hint">Tap the button to start recording</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Playback -->
+  <div id="screen-playback" class="screen" style="background:#000;position:relative;">
+    <video id="playback-video" playsinline controls style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;"></video>
+
+    <div class="playback-ui">
+      <button class="btn btn-secondary" onclick="retakeVideo()">↩ Retake</button>
+      <button class="btn btn-primary" onclick="confirmVideo()">Looks good ✓</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Uploading -->
+  <div id="screen-uploading" class="screen">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:2rem;">
+      <div class="upload-card">
+        <div style="font-size:2rem;margin-bottom:0.75rem;">⬆️</div>
+        <h2>Uploading...</h2>
+        <p>Saving your clip — please don't close the page</p>
+        <div class="progress-track">
+          <div id="upload-progress-bar" class="progress-bar"></div>
+        </div>
+        <div id="upload-percent" class="progress-percent">0%</div>
+        <div id="upload-status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Photo Upload -->
+  <div id="screen-photos" class="screen">
+    <div class="page">
+      <div class="photos-header">
+        <button class="btn btn-secondary btn-sm" style="width:auto;margin-bottom:1rem;" onclick="showDashboard()">← Back</button>
+        <h1>📸 Photos with Sharon</h1>
+        <p class="muted" style="margin-top:0.25rem;">Share your favourite moments together</p>
+      </div>
+
+      <div id="photos-list" class="photos-list"></div>
+
+      <!-- Hidden file input -->
+      <input type="file" id="photo-file-input" accept="image/*" style="display:none;" onchange="handlePhotoSelected(event)">
+
+      <button class="btn btn-primary" onclick="triggerPhotoInput()">📷 Add a Photo</button>
+
+      <div style="height:2rem;"></div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Thank You -->
+  <div id="screen-thankyou" class="screen">
+    <div class="page-center">
+      <div class="thankyou-content">
+        <div style="font-size:4rem;margin-bottom:1rem;">🎉</div>
+        <h1>You're Amazing!</h1>
+        <p id="thankyou-summary">You recorded 4 clips 🎉</p>
+
+        <div class="share-box">
+          "I've added my message for Sharon! 🎂"
+        </div>
+
+        <button class="btn btn-secondary" style="max-width:260px;" onclick="copyShareText()">Copy to share</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

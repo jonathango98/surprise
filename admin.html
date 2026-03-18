@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Sharon's Birthday</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Error Toast -->
+  <div id="error-toast"></div>
+
+  <!-- Loading Overlay -->
+  <div id="overlay-loading" class="overlay" style="z-index:400;">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading...</div>
+  </div>
+
+
+  <!-- ============================================
+       LOGIN VIEW
+       ============================================ -->
+  <div id="view-login" class="admin-login-wrap">
+    <div class="admin-login-card">
+      <div style="font-size:2rem;margin-bottom:0.5rem;">🔐</div>
+      <h1>Admin</h1>
+      <p class="muted">Sharon's Birthday Dashboard</p>
+
+      <div class="field" style="margin-top:1.5rem;text-align:left;">
+        <label>Password</label>
+        <input id="admin-password" class="input" type="password" placeholder="Enter admin password"
+          onkeydown="if(event.key==='Enter')adminLogin()">
+      </div>
+      <button class="btn btn-primary" onclick="adminLogin()">Log in</button>
+    </div>
+  </div>
+
+
+  <!-- ============================================
+       DASHBOARD VIEW
+       ============================================ -->
+  <div id="view-dashboard" style="display:none;" class="admin-layout">
+
+    <div class="admin-header">
+      <h1>🎂 Sharon's Birthday — Admin</h1>
+      <button class="btn btn-secondary btn-sm" style="width:auto;" onclick="adminLogout()">Log out</button>
+    </div>
+
+    <div class="admin-main">
+
+      <!-- Deadline Management -->
+      <div class="admin-section">
+        <h2>⏰ Deadline</h2>
+        <p class="muted" style="margin-bottom:1rem;">Current deadline: <strong id="current-deadline">—</strong></p>
+        <div class="deadline-row">
+          <input id="deadline-input" class="input" type="datetime-local">
+          <button class="btn btn-primary" style="width:auto;" onclick="setDeadline()">Update Deadline</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="admin-section">
+        <h2>📊 Stats</h2>
+        <div id="stats-grid" class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-contributors">—</div>
+            <div class="stat-label">Contributors</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-p1">—</div>
+            <div class="stat-label">Prompt 1</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-p2">—</div>
+            <div class="stat-label">Prompt 2</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-p3">—</div>
+            <div class="stat-label">Prompt 3</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-p4">—</div>
+            <div class="stat-label">Prompt 4</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-photos">—</div>
+            <div class="stat-label">Photos</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Downloads -->
+      <div class="admin-section">
+        <h2>⬇️ Downloads</h2>
+        <div class="download-buttons">
+          <button class="btn btn-secondary btn-sm" onclick="downloadZip(1)">Prompt 1 ZIP</button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadZip(2)">Prompt 2 ZIP</button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadZip(3)">Prompt 3 ZIP</button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadZip(4)">Prompt 4 ZIP</button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadZip('photos')">Photos ZIP</button>
+          <button class="btn btn-primary btn-sm" onclick="downloadZip('all')">Download All ZIP</button>
+        </div>
+      </div>
+
+      <!-- Submissions -->
+      <div class="admin-section">
+        <h2>👥 Submissions</h2>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Location</th>
+                <th>Submitted</th>
+                <th>Prompts</th>
+                <th>Photos</th>
+              </tr>
+            </thead>
+            <tbody id="submissions-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <script src="config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
