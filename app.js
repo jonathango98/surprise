@@ -90,18 +90,13 @@ async function apiFetch(path, options = {}) {
 // INIT
 // =============================================
 async function init() {
-  if (!localStorage.getItem('sharon_oath')) {
-    showOverlay('overlay-oath');
-    return;
-  }
-  afterOath();
+  showOverlay('overlay-oath');
 }
 
 // =============================================
 // OATH
 // =============================================
 function swear() {
-  localStorage.setItem('sharon_oath', '1');
   hideOverlay('overlay-oath');
   afterOath();
 }
@@ -231,7 +226,7 @@ function renderDashboard() {
     card.innerHTML = `
       <div class="card-icon">${completed ? '✅' : '🎥'}</div>
       <div class="card-content">
-        <div class="card-title">Prompt ${n}</div>
+        <div class="card-title">Prompt ${n} <span style="font-weight:400;opacity:0.6;font-size:0.85em;">(${prompt.limit}s)</span></div>
         <div class="card-subtitle">${prompt.text}</div>
         ${metaHtml}
       </div>

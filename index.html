@@ -122,7 +122,8 @@
   <!-- SCREEN: Dashboard -->
   <div id="screen-dashboard" class="screen">
     <div class="page">
-      <div class="dashboard-header">
+      <div class="dashboard-header" style="position:relative;">
+        <button onclick="logout()" style="position:absolute;top:0;right:0;background:none;border:none;color:rgba(255,255,255,0.5);font-size:0.8rem;cursor:pointer;padding:0.25rem 0.5rem;">Log out</button>
         <h1 id="dashboard-greeting">Hey there! 👋</h1>
         <p class="dashboard-subtitle">Tap a card to record your message</p>
       </div>
@@ -132,9 +133,6 @@
       <div class="dashboard-footer" id="dashboard-footer">
         <button id="btn-all-done" class="btn btn-primary" onclick="showThankyou()" style="display:none;">
           🎉 See your celebration!
-        </button>
-        <button class="btn btn-secondary btn-sm" style="margin-top:1rem;opacity:0.7;" onclick="logout()">
-          Log out
         </button>
       </div>
     </div>
