@@ -456,6 +456,7 @@ async function swapCamera() {
 // =============================================
 function showPlayback(blob) {
   cleanupOrientationCheck();
+  stopMediaStream();
 
   if (state.playbackUrl) {
     URL.revokeObjectURL(state.playbackUrl);
@@ -465,6 +466,7 @@ function showPlayback(blob) {
 
   const video = $('playback-video');
   video.src = url;
+  video.load();
   video.play().catch(() => {});
 
   showScreen('screen-playback');
