@@ -411,7 +411,7 @@ let canvasAnimFrame = null;
 async function startCameraRecording() {
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user' },
+      video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } },
       audio: true,
     });
 
