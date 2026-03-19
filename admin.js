@@ -194,7 +194,7 @@ function renderSubmissions(subs) {
   tbody.innerHTML = '';
 
   if (!subs.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">No submissions yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No submissions yet</td></tr>';
     return;
   }
 
@@ -216,6 +216,7 @@ function renderSubmissions(subs) {
       <td style="white-space:nowrap;">${formatDatetime(sub.submittedAt)}</td>
       <td><div class="prompt-dots">${dotsHtml}</div></td>
       <td>${sub.photoCount || 0}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteSubmission('${sub.identifier}', '${sub.firstName} ${sub.lastName}')">Delete</button></td>
     `;
 
     tr.addEventListener('click', () => toggleExpanded(sub.identifier, tr));
@@ -225,7 +226,7 @@ function renderSubmissions(subs) {
     const expandTr = document.createElement('tr');
     expandTr.id = `expand-${sub.identifier}`;
     expandTr.style.display = 'none';
-    expandTr.innerHTML = '<td colspan="5"><div class="expanded-row-inner" style="padding:1rem 0;color:var(--text-muted);font-size:0.85rem;">Loading details...</div></td>';
+    expandTr.innerHTML = '<td colspan="6"><div class="expanded-row-inner" style="padding:1rem 0;color:var(--text-muted);font-size:0.85rem;">Loading details...</div></td>';
     tbody.appendChild(expandTr);
   });
 }
@@ -292,6 +293,30 @@ function renderExpandedRow(container, data) {
 
   html += '</div>';
   container.innerHTML = html;
+}
+
+// =============================================
+// DELETE SUBMISSION
+// =============================================
+async function deleteSubmission(identifier, name) {
+  if (!confirm(`Delete all data for ${name}? This will mark their submission as deleted.`)) return;
+
+  try {
+    showLoading(true, 'Deleting...');
+    await apiFetch(`/admin/submission/${identifier}`, {
+      method: 'DELETE',
+    });
+    showLoading(false);
+
+    // Remove from local list and re-render
+    submissions = submissions.filter(s => s.identifier !== identifier);
+    renderStats(submissions);
+    renderSubmissions(submissions);
+    showError('✅ Submission deleted.');
+  } catch (e) {
+    showLoading(false);
+    showError(e.message);
+  }
 }
 
 // =============================================
