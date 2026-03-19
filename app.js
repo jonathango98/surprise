@@ -298,8 +298,9 @@ function startPromptUpload(n) {
   $('upload-preview-video').src = '';
   $('upload-requirements').style.display = 'none';
   $('btn-confirm-upload').style.display = 'none';
-  $('btn-select-video').textContent = '📹 Select a video';
-  $('btn-select-video').className = 'btn btn-primary';
+  $('btn-select-video').textContent = '📹 Choose from library';
+  $('btn-select-video').className = 'btn btn-secondary';
+  $('btn-record-video').style.display = '';
 
   showScreen('screen-upload');
 }
@@ -394,6 +395,163 @@ function getVideoMetadata(url) {
     video.onerror = () => reject(new Error('Failed to load video'));
     video.src = url;
   });
+}
+
+// =============================================
+// IN-BROWSER CAMERA RECORDING
+// =============================================
+let cameraStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recTimerInterval = null;
+let recStartTime = 0;
+
+async function startCameraRecording() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1080 }, height: { ideal: 1920 } },
+      audio: true,
+    });
+    const preview = $('camera-live-preview');
+    preview.srcObject = cameraStream;
+    $('camera-rec-prompt').textContent = state.currentPrompt.text;
+    $('camera-rec-timer').style.display = 'none';
+    $('camera-rec-hint').textContent = 'Tap to start recording';
+    $('camera-rec-inner').style.borderRadius = '50%';
+    $('camera-rec-inner').style.width = '28px';
+    $('camera-rec-inner').style.height = '28px';
+    mediaRecorder = null;
+    recordedChunks = [];
+    $('screen-camera-record').classList.add('active');
+  } catch (e) {
+    alert('Could not access camera. Please allow camera access or use "Choose from library" instead.');
+  }
+}
+
+function toggleCameraRecording() {
+  if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+    // Start recording
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : MediaRecorder.isTypeSupported('video/webm')
+        ? 'video/webm'
+        : 'video/mp4';
+    mediaRecorder = new MediaRecorder(cameraStream, { mimeType });
+    recordedChunks = [];
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+    mediaRecorder.onstop = () => finishCameraRecording();
+    mediaRecorder.start(100);
+    recStartTime = Date.now();
+    $('camera-rec-timer').style.display = 'block';
+    $('camera-rec-hint').textContent = 'Tap to stop';
+    $('camera-rec-inner').style.borderRadius = '4px';
+    $('camera-rec-inner').style.width = '24px';
+    $('camera-rec-inner').style.height = '24px';
+    recTimerInterval = setInterval(updateRecTimer, 500);
+  } else {
+    // Stop recording
+    mediaRecorder.stop();
+    clearInterval(recTimerInterval);
+  }
+}
+
+function updateRecTimer() {
+  const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  $('camera-rec-timer').textContent = `${m}:${s.toString().padStart(2, '0')}`;
+
+  // Auto-stop if over the limit
+  const maxSec = state.currentPrompt.limit + Math.max(5, Math.round(state.currentPrompt.limit * 0.15));
+  if (elapsed >= maxSec && mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    clearInterval(recTimerInterval);
+  }
+}
+
+function finishCameraRecording() {
+  stopCameraStream();
+  const blob = new Blob(recordedChunks, { type: recordedChunks[0]?.type || 'video/mp4' });
+  const file = new File([blob], 'recording.webm', { type: blob.type });
+
+  // Feed the recorded file into the existing upload flow
+  state.selectedFile = file;
+  if (state.playbackUrl) URL.revokeObjectURL(state.playbackUrl);
+  const url = URL.createObjectURL(blob);
+  state.playbackUrl = url;
+
+  $('screen-camera-record').classList.remove('active');
+
+  // Show preview in upload screen
+  const previewVideo = $('upload-preview-video');
+  previewVideo.src = url;
+  previewVideo.style.display = 'block';
+
+  $('upload-requirements').style.display = 'block';
+  $('btn-select-video').textContent = 'Try a different video';
+  $('btn-select-video').className = 'btn btn-secondary';
+  $('btn-record-video').style.display = 'none';
+
+  // Run validation
+  validateRecordedVideo(file, url);
+}
+
+async function validateRecordedVideo(file, url) {
+  $('req-size').textContent = '⏳ Checking size...';
+  $('req-portrait').textContent = '⏳ Checking orientation...';
+  $('req-duration').textContent = '⏳ Checking duration...';
+  $('btn-confirm-upload').style.display = 'none';
+
+  const MAX_BYTES = 50 * 1024 * 1024;
+  const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+  const sizeOk = file.size <= MAX_BYTES;
+  $('req-size').textContent = sizeOk
+    ? `✅ Size: ${sizeMB} MB (under 50 MB)`
+    : `❌ Too large: ${sizeMB} MB — max is 50 MB`;
+
+  let portraitOk = false;
+  let durationOk = false;
+  try {
+    const meta = await getVideoMetadata(url);
+    const limitSec = state.currentPrompt.limit;
+    portraitOk = meta.height >= meta.width;
+    $('req-portrait').textContent = portraitOk
+      ? `✅ Portrait (${meta.width}×${meta.height})`
+      : `❌ Not portrait (${meta.width}×${meta.height})`;
+    const maxDuration = limitSec + Math.max(5, Math.round(limitSec * 0.15));
+    const durSec = Math.ceil(meta.duration);
+    durationOk = meta.duration <= maxDuration;
+    $('req-duration').textContent = durationOk
+      ? `✅ Duration: ${durSec}s (limit ~${limitSec}s)`
+      : `❌ Too long: ${durSec}s — keep it under ${limitSec}s`;
+  } catch (e) {
+    $('req-portrait').textContent = '❌ Could not read video info';
+    $('req-duration').textContent = '';
+  }
+
+  if (sizeOk && portraitOk && durationOk) {
+    $('btn-confirm-upload').style.display = 'flex';
+  }
+}
+
+function cancelCameraRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+  }
+  clearInterval(recTimerInterval);
+  stopCameraStream();
+  recordedChunks = [];
+  $('screen-camera-record').classList.remove('active');
+}
+
+function stopCameraStream() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  $('camera-live-preview').srcObject = null;
 }
 
 async function confirmVideo() {
