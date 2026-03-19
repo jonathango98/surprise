@@ -20,15 +20,9 @@ const state = {
   session: null,          // { firstName, lastName, location, identifier, completedPrompts, photoCount, timestamps }
   currentPrompt: null,    // prompt config { n, text, limit }
   pendingRetakePrompt: null,
-  mediaStream: null,
-  mediaRecorder: null,
-  recordedChunks: [],
-  recordedBlob: null,
-  recordedMimeType: '',
-  timerInterval: null,
+  selectedFile: null,     // File object chosen for upload
   playbackUrl: null,
   photoFiles: [],
-  facingMode: 'user',
 };
 
 // =============================================
@@ -220,7 +214,7 @@ function renderDashboard() {
     if (completed && timestamps && timestamps[n]) {
       const hrs = Math.floor((Date.now() - new Date(timestamps[n]).getTime()) / 3600000);
       const agoStr = hrs < 1 ? 'just now' : hrs === 1 ? '1 hr ago' : `${hrs} hrs ago`;
-      metaHtml = `<div class="card-meta">Recorded ${agoStr}</div>`;
+      metaHtml = `<div class="card-meta">Uploaded ${agoStr}</div>`;
     }
 
     card.innerHTML = `
@@ -265,14 +259,14 @@ function handlePromptCardTap(n, completed) {
     state.pendingRetakePrompt = n;
     showOverlay('overlay-retake');
   } else {
-    startPromptRecording(n);
+    startPromptUpload(n);
   }
 }
 
 function confirmRetake() {
   hideOverlay('overlay-retake');
   if (state.pendingRetakePrompt) {
-    startPromptRecording(state.pendingRetakePrompt);
+    startPromptUpload(state.pendingRetakePrompt);
     state.pendingRetakePrompt = null;
   }
 }
@@ -283,229 +277,140 @@ function cancelRetake() {
 }
 
 // =============================================
-// RECORDING FLOW
+// VIDEO UPLOAD FLOW
 // =============================================
-async function startPromptRecording(n) {
+function startPromptUpload(n) {
   state.currentPrompt = PROMPTS.find(p => p.n === n);
+  state.selectedFile = null;
 
-  $('recording-prompt-label').textContent = `Prompt ${n} of 4`;
-  $('recording-prompt-text').textContent = state.currentPrompt.text;
-  $('recording-hint').textContent = 'Tap the button to start recording';
-
-  showScreen('screen-recording');
-  await initCamera();
-}
-
-async function initCamera() {
-  try {
-    // Stop any existing stream
-    stopMediaStream();
-
-    state.mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: state.facingMode },
-      audio: true,
-    });
-
-    const preview = $('camera-preview');
-    preview.srcObject = state.mediaStream;
-    preview.style.transform = state.facingMode === 'user' ? 'scaleX(-1)' : 'none';
-    await preview.play();
-
-    // Reset UI
-    $('btn-record').style.display = 'flex';
-    $('btn-stop').style.display = 'none';
-    $('recording-timer').style.display = 'none';
-    $('recording-timer').classList.remove('urgent');
-
-    setupOrientationCheck();
-  } catch (e) {
-    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError' || e.name === 'NotFoundError') {
-      stopMediaStream();
-      showScreen('screen-camera-denied');
-    } else {
-      showError('Could not access camera: ' + e.message);
-      showDashboard();
-    }
-  }
-}
-
-function setupOrientationCheck() {
-  checkOrientation();
-  window.addEventListener('resize', checkOrientation);
-  if (window.screen && window.screen.orientation) {
-    window.screen.orientation.addEventListener('change', checkOrientation);
-  }
-}
-
-function cleanupOrientationCheck() {
-  window.removeEventListener('resize', checkOrientation);
-  if (window.screen && window.screen.orientation) {
-    window.screen.orientation.removeEventListener('change', checkOrientation);
-  }
-  hideOverlay('overlay-rotate');
-}
-
-function checkOrientation() {
-  const isLandscape = window.innerWidth > window.innerHeight;
-  if (isLandscape) {
-    showOverlay('overlay-rotate');
-  } else {
-    hideOverlay('overlay-rotate');
-  }
-}
-
-function startRecording() {
-  if (!state.mediaStream) return;
-
-  // Block in landscape
-  if (window.innerWidth > window.innerHeight) {
-    showOverlay('overlay-rotate');
-    return;
+  if (state.playbackUrl) {
+    URL.revokeObjectURL(state.playbackUrl);
+    state.playbackUrl = null;
   }
 
-  state.recordedChunks = [];
+  $('upload-prompt-label').textContent = `Prompt ${n} of 4`;
+  $('upload-prompt-text').textContent = state.currentPrompt.text;
+  $('upload-duration-hint').textContent = `Keep it under ${state.currentPrompt.limit}s`;
 
-  const mimeType = getSupportedMimeType();
-  state.recordedMimeType = mimeType;
+  // Reset UI
+  $('video-file-input').value = '';
+  $('upload-preview-video').style.display = 'none';
+  $('upload-preview-video').src = '';
+  $('upload-requirements').style.display = 'none';
+  $('btn-confirm-upload').style.display = 'none';
+  $('btn-select-video').textContent = '📹 Select a video';
+  $('btn-select-video').className = 'btn btn-primary';
 
-  const options = mimeType ? { mimeType } : {};
-  state.mediaRecorder = new MediaRecorder(state.mediaStream, options);
-
-  state.mediaRecorder.ondataavailable = (e) => {
-    if (e.data && e.data.size > 0) {
-      state.recordedChunks.push(e.data);
-    }
-  };
-
-  state.mediaRecorder.onstop = () => {
-    const blob = new Blob(state.recordedChunks, { type: mimeType || 'video/webm' });
-    state.recordedBlob = blob;
-    showPlayback(blob);
-  };
-
-  state.mediaRecorder.start(100);
-
-  // UI
-  $('btn-record').style.display = 'none';
-  $('btn-stop').style.display = 'inline-flex';
-  $('recording-hint').textContent = '';
-
-  const timer = $('recording-timer');
-  timer.style.display = 'block';
-  timer.classList.remove('urgent');
-
-  let remaining = state.currentPrompt.limit;
-  updateTimerDisplay(remaining);
-
-  state.timerInterval = setInterval(() => {
-    remaining--;
-    updateTimerDisplay(remaining);
-    if (remaining <= 0) {
-      clearInterval(state.timerInterval);
-      stopRecording();
-    }
-  }, 1000);
+  showScreen('screen-upload');
 }
 
-function stopRecording() {
-  clearInterval(state.timerInterval);
-  if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
-    state.mediaRecorder.stop();
+function triggerVideoInput() {
+  $('video-file-input').click();
+}
+
+function cancelUpload() {
+  if (state.playbackUrl) {
+    URL.revokeObjectURL(state.playbackUrl);
+    state.playbackUrl = null;
   }
-  $('btn-record').style.display = 'none';
-  $('btn-stop').style.display = 'none';
-}
-
-function updateTimerDisplay(remaining) {
-  const el = $('recording-timer');
-  el.textContent = remaining + 's';
-  el.classList.toggle('urgent', remaining <= 3);
-}
-
-function getSupportedMimeType() {
-  const types = [
-    'video/webm;codecs=vp9,opus',
-    'video/webm;codecs=vp8,opus',
-    'video/webm',
-    'video/mp4',
-  ];
-  for (const type of types) {
-    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) return type;
-  }
-  return '';
-}
-
-function cancelRecording() {
-  clearInterval(state.timerInterval);
-  if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
-    state.mediaRecorder.stop();
-  }
-  cleanupOrientationCheck();
-  stopMediaStream();
+  state.selectedFile = null;
   showDashboard();
 }
 
-async function swapCamera() {
-  if (state.mediaRecorder && state.mediaRecorder.state === 'recording') return;
-  state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
-  await initCamera();
-}
-
-// =============================================
-// PLAYBACK
-// =============================================
-function showPlayback(blob) {
-  cleanupOrientationCheck();
-  stopMediaStream();
+async function handleVideoSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
 
   if (state.playbackUrl) {
     URL.revokeObjectURL(state.playbackUrl);
   }
-  const url = URL.createObjectURL(blob);
+  state.selectedFile = file;
+
+  const url = URL.createObjectURL(file);
   state.playbackUrl = url;
 
-  const video = $('playback-video');
-  video.src = url;
-  video.load();
-  video.onloadeddata = () => {
-    video.currentTime = 0.001;
-  };
-  video.play().catch(() => {});
+  // Show preview
+  const previewVideo = $('upload-preview-video');
+  previewVideo.src = url;
+  previewVideo.style.display = 'block';
 
-  showScreen('screen-playback');
+  // Show requirements in loading state
+  $('upload-requirements').style.display = 'block';
+  $('req-size').textContent = '⏳ Checking size...';
+  $('req-portrait').textContent = '⏳ Checking orientation...';
+  $('req-duration').textContent = '⏳ Checking duration...';
+  $('btn-confirm-upload').style.display = 'none';
+  $('btn-select-video').textContent = 'Try a different video';
+  $('btn-select-video').className = 'btn btn-secondary';
+
+  // Size check (instant)
+  const MAX_BYTES = 50 * 1024 * 1024;
+  const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+  const sizeOk = file.size <= MAX_BYTES;
+  $('req-size').textContent = sizeOk
+    ? `✅ Size: ${sizeMB} MB (under 50 MB)`
+    : `❌ Too large: ${sizeMB} MB — max is 50 MB`;
+
+  // Portrait + duration checks via video metadata
+  let portraitOk = false;
+  let durationOk = false;
+  try {
+    const meta = await getVideoMetadata(url);
+    const limitSec = state.currentPrompt.limit;
+
+    portraitOk = meta.height > meta.width;
+    $('req-portrait').textContent = portraitOk
+      ? `✅ Portrait (${meta.width}×${meta.height})`
+      : `❌ Not portrait — upload a vertical video (yours: ${meta.width}×${meta.height})`;
+
+    const maxDuration = limitSec + Math.max(5, Math.round(limitSec * 0.15));
+    const durSec = Math.ceil(meta.duration);
+    durationOk = meta.duration <= maxDuration;
+    $('req-duration').textContent = durationOk
+      ? `✅ Duration: ${durSec}s (limit ~${limitSec}s)`
+      : `❌ Too long: ${durSec}s — keep it under ${limitSec}s`;
+  } catch (e) {
+    $('req-portrait').textContent = '❌ Could not read video info — try another file';
+    $('req-duration').textContent = '';
+  }
+
+  if (sizeOk && portraitOk && durationOk) {
+    $('btn-confirm-upload').style.display = 'flex';
+  }
+
+  // Reset so re-selecting the same file re-triggers the change event
+  event.target.value = '';
 }
 
-function retakeVideo() {
-  if (state.playbackUrl) {
-    URL.revokeObjectURL(state.playbackUrl);
-    state.playbackUrl = null;
-  }
-  const video = $('playback-video');
-  video.src = '';
-
-  state.recordedBlob = null;
-  state.recordedChunks = [];
-
-  startPromptRecording(state.currentPrompt.n);
+function getVideoMetadata(url) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => resolve({
+      width: video.videoWidth,
+      height: video.videoHeight,
+      duration: video.duration,
+    });
+    video.onerror = () => reject(new Error('Failed to load video'));
+    video.src = url;
+  });
 }
 
 async function confirmVideo() {
-  if (!state.recordedBlob) return;
+  if (!state.selectedFile) return;
 
-  // Enforce 50MB max
-  if (state.recordedBlob.size > 50 * 1024 * 1024) {
-    showError('Video is too large (max 50MB). Please record a shorter clip.');
+  if (state.selectedFile.size > 50 * 1024 * 1024) {
+    showError('Video is too large (max 50 MB). Please choose a smaller file.');
     return;
   }
 
-  // Revoke playback URL
   if (state.playbackUrl) {
     URL.revokeObjectURL(state.playbackUrl);
     state.playbackUrl = null;
   }
-  $('playback-video').src = '';
+  $('upload-preview-video').src = '';
 
-  // Reset upload UI
+  // Reset upload progress UI
   $('upload-progress-bar').style.width = '0%';
   $('upload-percent').textContent = '0%';
   $('upload-status').textContent = '';
@@ -522,9 +427,9 @@ async function confirmVideo() {
       }),
     });
 
-    // 2. Upload blob to S3
+    // 2. Upload file to S3
     $('upload-status').textContent = 'Uploading your clip...';
-    await uploadToS3(state.recordedBlob, presignData.uploadUrl, (progress) => {
+    await uploadToS3(state.selectedFile, presignData.uploadUrl, (progress) => {
       $('upload-progress-bar').style.width = (progress * 100) + '%';
       $('upload-percent').textContent = Math.round(progress * 100) + '%';
     });
@@ -546,21 +451,18 @@ async function confirmVideo() {
     state.session.timestamps[state.currentPrompt.n] = new Date().toISOString();
     localStorage.setItem('sharon_session', JSON.stringify(state.session));
 
-    stopMediaStream();
-    cleanupOrientationCheck();
-    state.recordedBlob = null;
-
+    state.selectedFile = null;
     showDashboard();
   } catch (e) {
     showError(e.message);
-    // Restore playback screen with blob
-    if (state.recordedBlob) {
-      const url = URL.createObjectURL(state.recordedBlob);
+    // Restore upload screen with preview
+    if (state.selectedFile) {
+      const url = URL.createObjectURL(state.selectedFile);
       state.playbackUrl = url;
-      $('playback-video').src = url;
-      $('playback-video').play().catch(() => {});
+      $('upload-preview-video').src = url;
+      $('upload-preview-video').style.display = 'block';
     }
-    showScreen('screen-playback');
+    showScreen('screen-upload');
   }
 }
 
@@ -585,15 +487,6 @@ async function uploadToS3(blob, uploadUrl, onProgress) {
     xhr.setRequestHeader('Content-Type', blob.type || 'video/webm');
     xhr.send(blob);
   });
-}
-
-function stopMediaStream() {
-  if (state.mediaStream) {
-    state.mediaStream.getTracks().forEach(t => t.stop());
-    state.mediaStream = null;
-  }
-  const preview = $('camera-preview');
-  if (preview) preview.srcObject = null;
 }
 
 // =============================================
@@ -701,7 +594,7 @@ function showThankyou() {
   const { photoCount } = state.session;
   const photos = photoCount || 0;
   $('thankyou-summary').textContent =
-    `You recorded 4 clips and uploaded ${photos} photo${photos !== 1 ? 's' : ''} 🎉`;
+    `You uploaded 4 clips and ${photos} photo${photos !== 1 ? 's' : ''} 🎉`;
   showScreen('screen-thankyou');
   launchConfetti();
 }
@@ -754,8 +647,12 @@ function launchConfetti() {
 // LOGOUT
 // =============================================
 function logout() {
-  stopMediaStream();
+  if (state.playbackUrl) {
+    URL.revokeObjectURL(state.playbackUrl);
+    state.playbackUrl = null;
+  }
   state.session = null;
+  state.selectedFile = null;
   localStorage.removeItem('sharon_session');
   showScreen('screen-form');
 }

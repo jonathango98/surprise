@@ -30,20 +30,13 @@
   <div id="overlay-retake" class="overlay">
     <div class="popup">
       <div style="font-size:2rem;margin-bottom:0.75rem;">⚠️</div>
-      <h2>Re-record this prompt?</h2>
-      <p>Re-recording this prompt will delete your previous clip. Continue?</p>
+      <h2>Re-upload this prompt?</h2>
+      <p>Re-uploading will replace your previous clip. Continue?</p>
       <div class="btn-row">
         <button class="btn btn-secondary" onclick="cancelRetake()">Cancel</button>
-        <button class="btn btn-danger" onclick="confirmRetake()">Yes, retake</button>
+        <button class="btn btn-danger" onclick="confirmRetake()">Yes, replace</button>
       </div>
     </div>
-  </div>
-
-  <!-- Rotate Phone Overlay -->
-  <div id="overlay-rotate" class="overlay" style="z-index:300;">
-    <div class="rotate-icon">📱</div>
-    <h2>Rotate your phone</h2>
-    <p class="muted">Please hold your phone upright<br>to record a portrait video</p>
   </div>
 
   <!-- Loading Overlay -->
@@ -81,18 +74,6 @@
     </div>
   </div>
 
-  <!-- SCREEN: Camera Permission Denied -->
-  <div id="screen-camera-denied" class="screen">
-    <div class="page-center">
-      <div class="camera-denied-card">
-        <div style="font-size:2.5rem;margin-bottom:1rem;">🎥</div>
-        <h2>Camera Access Needed</h2>
-        <p class="muted" style="margin:0.75rem 0 1.5rem;">We need camera access to record your message. Please enable it in your browser settings, then refresh the page.</p>
-        <button class="btn btn-secondary" onclick="showDashboard()">← Back to Dashboard</button>
-      </div>
-    </div>
-  </div>
-
   <!-- SCREEN: Registration Form -->
   <div id="screen-form" class="screen">
     <div class="page" style="justify-content:center;">
@@ -125,7 +106,7 @@
       <div class="dashboard-header" style="position:relative;">
         <button onclick="logout()" style="position:absolute;top:0;right:0;background:none;border:none;color:rgba(255,255,255,0.5);font-size:0.8rem;cursor:pointer;padding:0.25rem 0.5rem;">Log out</button>
         <h1 id="dashboard-greeting">Hey there! 👋</h1>
-        <p class="dashboard-subtitle">Tap a card to record your message</p>
+        <p class="dashboard-subtitle">Tap a card to upload your message</p>
       </div>
 
       <div id="cards-container" class="cards-list"></div>
@@ -138,38 +119,34 @@
     </div>
   </div>
 
-  <!-- SCREEN: Recording -->
-  <div id="screen-recording" class="screen">
-    <video id="camera-preview" playsinline muted autoplay></video>
-
-    <div class="recording-ui">
-      <div class="recording-top">
-        <button class="recording-back" onclick="cancelRecording()">← Cancel</button>
-        <div id="recording-prompt-label" class="recording-label">Prompt 1 of 4</div>
-        <div id="recording-prompt-text" class="recording-prompt">Prompt goes here</div>
-        <button id="btn-swap-camera" onclick="swapCamera()" style="position:absolute;top:1rem;right:1rem;background:rgba(0,0,0,0.4);border:none;border-radius:50%;width:2.5rem;height:2.5rem;font-size:1.2rem;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center;">⟳</button>
+  <!-- SCREEN: Upload Video -->
+  <div id="screen-upload" class="screen">
+    <div class="page">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+        <button class="btn btn-secondary btn-sm" style="width:auto;" onclick="cancelUpload()">← Cancel</button>
+        <div id="upload-prompt-label" style="font-size:0.8rem;color:rgba(255,255,255,0.5);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Prompt 1 of 4</div>
       </div>
 
-      <div class="recording-bottom">
-        <div id="recording-timer">10s</div>
-        <div class="record-controls">
-          <div id="btn-record" onclick="startRecording()">
-            <div class="record-dot"></div>
-          </div>
-          <button id="btn-stop" onclick="stopRecording()">Stop Early</button>
-        </div>
-        <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;" id="recording-hint">Tap the button to start recording</p>
+      <div id="upload-prompt-text" style="font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:0.25rem;">Prompt goes here</div>
+      <div id="upload-duration-hint" style="font-size:0.85rem;color:rgba(255,255,255,0.45);margin-bottom:1.25rem;">Keep it under 10s</div>
+
+      <!-- Hidden file input -->
+      <input type="file" id="video-file-input" accept="video/*" style="display:none;" onchange="handleVideoSelected(event)">
+
+      <!-- Video preview -->
+      <video id="upload-preview-video" playsinline controls style="display:none;width:100%;max-height:45vh;border-radius:12px;background:#000;margin-bottom:1rem;"></video>
+
+      <!-- Requirements checklist -->
+      <div id="upload-requirements" style="display:none;background:rgba(255,255,255,0.05);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+        <div id="req-size" style="padding:0.35rem 0;font-size:0.9rem;"></div>
+        <div id="req-portrait" style="padding:0.35rem 0;font-size:0.9rem;"></div>
+        <div id="req-duration" style="padding:0.35rem 0;font-size:0.9rem;"></div>
       </div>
-    </div>
-  </div>
 
-  <!-- SCREEN: Playback -->
-  <div id="screen-playback" class="screen" style="background:#000;position:relative;">
-    <video id="playback-video" playsinline controls style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;"></video>
+      <button class="btn btn-primary" id="btn-select-video" onclick="triggerVideoInput()">📹 Select a video</button>
+      <button class="btn btn-primary" id="btn-confirm-upload" onclick="confirmVideo()" style="display:none;margin-top:0.75rem;">Upload ✓</button>
 
-    <div class="playback-ui">
-      <button class="btn btn-secondary" onclick="retakeVideo()">↩ Retake</button>
-      <button class="btn btn-primary" onclick="confirmVideo()">Looks good ✓</button>
+      <div style="height:2rem;"></div>
     </div>
   </div>
 
@@ -215,7 +192,7 @@
       <div class="thankyou-content">
         <div style="font-size:4rem;margin-bottom:1rem;">🎉</div>
         <h1>You're Amazing!</h1>
-        <p id="thankyou-summary">You recorded 4 clips 🎉</p>
+        <p id="thankyou-summary">You uploaded 4 clips 🎉</p>
 
         <div class="share-box">
           "I've added my message for Sharon! 🎂"

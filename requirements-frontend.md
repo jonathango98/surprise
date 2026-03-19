@@ -74,52 +74,47 @@ VITE_BACKEND_URL=https://your-railway-app.up.railway.app
   5. Upload Photos with Sharon
 - Card states:
   - **Incomplete** — default, tappable
-  - **Completed** — green checkmark, shows "Recorded X hrs ago", tappable with retake warning
+  - **Completed** — green checkmark, shows "Uploaded X hrs ago", tappable with re-upload warning
   - Cards unlock sequentially (can't skip ahead)
 - Tapping a completed card → show retake warning before entering:
-  > ⚠️ Re-recording this prompt will delete your previous clip. Continue?
+  > ⚠️ Re-uploading this prompt will replace your previous clip. Continue?
 
 ---
 
-### 6. Recording Screen (Prompts 1–4)
+### 6. Video Upload Screen (Prompts 1–4)
 
-#### Portrait Enforcement
-- Request camera with `{ video: { width: 720, height: 1280 }, audio: true }`
-- Detect orientation via `window.screen.orientation` or `window.innerHeight < window.innerWidth`
-- If landscape → show animated "Rotate your phone" illustration, block recording until portrait
+User uploads a pre-recorded vertical video from their camera roll. No in-browser recording.
 
-#### Camera Permission
-- If denied → show friendly message explaining how to enable camera in browser settings
+#### Upload UI
+- Shows prompt text and duration guideline (e.g. "Keep it under 10s")
+- **"📹 Select a video"** button → opens native file picker (`accept="video/*"`)
+- After file selected:
+  - Inline video preview (playable)
+  - Requirements checklist with live pass/fail status
+  - **"Try a different video"** button to pick again
+  - **"Upload ✓"** button — only shown when all requirements pass
 
-#### Recording UI
-- Large prompt text at top (clear, readable)
-- Live camera preview (portrait, full-screen)
-- Big red **Record** button
-- On record start:
-  - Show countdown timer
-  - Timer color shifts to red in last 3 seconds
-  - Auto-stop at time limit (10s for P1/P4, 60s for P2/P3)
-- **Stop Early** button — visible and clearly labeled during recording
-- On stop → go to Playback
+#### Requirements Checked Client-Side
+1. **Size** — file must be ≤ 50 MB
+2. **Portrait orientation** — `videoHeight > videoWidth` (checked via HTMLVideoElement metadata)
+3. **Duration** — must be ≤ prompt limit + buffer (5s or 15%, whichever is larger)
 
-#### Playback
-- Full-screen video playback
-- Two buttons only: **Retake** and **Looks good ✓**
-- **Retake** → discard local blob, return to recording screen
-- **Looks good** → proceed to upload
+Each requirement shows ✅ or ❌ with details (actual dimensions, file size, duration).
 
 #### Upload
 - `POST /presign` → get S3 presigned PUT URL
-- Upload blob directly to S3
-- Show upload progress bar (not just spinner)
+- Upload file directly to S3 with progress bar
 - On success → `POST /submit-clip` with metadata
 - Mark card green, return to dashboard
+
+#### On Error
+- Returns to upload screen with preview still visible; user can retry or pick different file
 
 #### S3 Key Format
 ```
 sharon-bday/prompt-{n}/{firstname}-{lastname}-{location}-p{n}.mp4
 ```
-- Retake: backend returns new presigned URL with same key (overwrites), increments version number suffix in DB
+- Re-upload: backend returns new presigned URL with incremented version suffix in DB
 
 ---
 
@@ -178,6 +173,7 @@ sharon-bday/prompt-{n}/{firstname}-{lastname}-{location}-p{n}.mp4
 
 ## Security / UX Notes
 - Rate limit awareness: frontend should handle 429 responses gracefully
-- Max file size: enforce client-side (50MB video, 10MB photo) before upload attempt
+- Max file size: enforce client-side (50 MB video, 10 MB photo) before upload attempt
+- Video requirements enforced client-side before upload: size ≤ 50 MB, portrait orientation, duration within prompt limit
 - All API calls include error handling with user-friendly messages
 - No form tags — use `onClick` handlers only
