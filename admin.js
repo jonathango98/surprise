@@ -212,7 +212,6 @@ function renderSubmissions(subs) {
 
     tr.innerHTML = `
       <td><strong>${sub.firstName} ${sub.lastName}</strong></td>
-      <td>${sub.location || '—'}</td>
       <td style="white-space:nowrap;">${formatDatetime(sub.submittedAt)}</td>
       <td><div class="prompt-dots">${dotsHtml}</div></td>
       <td>${sub.photoCount || 0}</td>
