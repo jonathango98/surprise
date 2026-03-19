@@ -405,15 +405,67 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let recTimerInterval = null;
 let recStartTime = 0;
+let canvasStream = null;
+let canvasAnimFrame = null;
 
 async function startCameraRecording() {
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', aspectRatio: { ideal: 9 / 16 }, height: { ideal: 1920 } },
+      video: { facingMode: 'user' },
       audio: true,
     });
-    const preview = $('camera-live-preview');
-    preview.srcObject = cameraStream;
+
+    const videoEl = document.createElement('video');
+    videoEl.srcObject = cameraStream;
+    videoEl.setAttribute('playsinline', '');
+    videoEl.muted = true;
+    await videoEl.play();
+
+    // Wait for actual dimensions
+    await new Promise(resolve => {
+      if (videoEl.videoWidth) return resolve();
+      videoEl.addEventListener('loadedmetadata', resolve, { once: true });
+    });
+
+    const vw = videoEl.videoWidth;
+    const vh = videoEl.videoHeight;
+    const isLandscape = vw > vh;
+
+    // Canvas dimensions: always portrait
+    const canvas = $('camera-canvas');
+    const cw = isLandscape ? vh : vw;
+    const ch = isLandscape ? vw : vh;
+    canvas.width = cw;
+    canvas.height = ch;
+    canvas.style.display = 'block';
+    $('camera-live-preview').style.display = 'none';
+
+    const ctx = canvas.getContext('2d');
+
+    function drawFrame() {
+      ctx.save();
+      if (isLandscape) {
+        // Rotate landscape stream to portrait + mirror for front camera
+        ctx.translate(cw / 2, ch / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.scale(-1, 1); // mirror
+        ctx.drawImage(videoEl, -ch / 2, -cw / 2, ch, cw);
+      } else {
+        // Already portrait, just mirror for front camera
+        ctx.translate(cw, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoEl, 0, 0, cw, ch);
+      }
+      ctx.restore();
+      canvasAnimFrame = requestAnimationFrame(drawFrame);
+    }
+    drawFrame();
+
+    // Build a combined stream: canvas video + mic audio
+    canvasStream = canvas.captureStream(30);
+    const audioTracks = cameraStream.getAudioTracks();
+    audioTracks.forEach(t => canvasStream.addTrack(t));
+
     $('camera-rec-prompt').textContent = state.currentPrompt.text;
     $('camera-rec-timer').style.display = 'none';
     $('camera-rec-hint').textContent = 'Tap to start recording';
@@ -430,13 +482,13 @@ async function startCameraRecording() {
 
 function toggleCameraRecording() {
   if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-    // Start recording
+    // Start recording from the canvas stream (portrait)
     const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
       ? 'video/webm;codecs=vp9'
       : MediaRecorder.isTypeSupported('video/webm')
         ? 'video/webm'
         : 'video/mp4';
-    mediaRecorder = new MediaRecorder(cameraStream, { mimeType });
+    mediaRecorder = new MediaRecorder(canvasStream, { mimeType });
     recordedChunks = [];
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) recordedChunks.push(e.data);
@@ -547,11 +599,18 @@ function cancelCameraRecording() {
 }
 
 function stopCameraStream() {
+  if (canvasAnimFrame) {
+    cancelAnimationFrame(canvasAnimFrame);
+    canvasAnimFrame = null;
+  }
   if (cameraStream) {
     cameraStream.getTracks().forEach(t => t.stop());
     cameraStream = null;
   }
+  canvasStream = null;
   $('camera-live-preview').srcObject = null;
+  $('camera-live-preview').style.display = '';
+  $('camera-canvas').style.display = 'none';
 }
 
 async function confirmVideo() {
