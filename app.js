@@ -296,6 +296,7 @@ function startPromptUpload(n) {
   $('upload-preview-video').style.display = 'none';
   $('upload-preview-video').src = '';
   $('upload-rules').style.display = '';
+  $('rules-time-limit').innerHTML = `⏱️ Keep it under <strong style="color:#fff;">${state.currentPrompt.limit} seconds</strong>`;
   $('upload-requirements').style.display = 'none';
   $('btn-confirm-upload').style.display = 'none';
   $('btn-record-video').textContent = '🎥 Record video';
@@ -461,8 +462,8 @@ function updateRecTimer() {
   const s = elapsed % 60;
   $('camera-rec-timer').textContent = `${m}:${s.toString().padStart(2, '0')}`;
 
-  // Auto-stop if over the limit
-  const maxSec = state.currentPrompt.limit + Math.max(5, Math.round(state.currentPrompt.limit * 0.15));
+  // Auto-stop if over 120% of the limit
+  const maxSec = Math.ceil(state.currentPrompt.limit * 1.2);
   if (elapsed >= maxSec && mediaRecorder && mediaRecorder.state === 'recording') {
     mediaRecorder.stop();
     clearInterval(recTimerInterval);
@@ -520,7 +521,7 @@ async function validateRecordedVideo(file, url, knownDuration) {
       ? `✅ Portrait (${meta.width}×${meta.height})`
       : `❌ Not portrait (${meta.width}×${meta.height})`;
     const duration = (isFinite(meta.duration) && meta.duration > 0) ? meta.duration : knownDuration;
-    const maxDuration = limitSec + Math.max(5, Math.round(limitSec * 0.15));
+    const maxDuration = Math.ceil(limitSec * 1.2);
     const durSec = Math.ceil(duration);
     durationOk = duration <= maxDuration;
     $('req-duration').textContent = durationOk
