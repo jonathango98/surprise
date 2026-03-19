@@ -524,6 +524,7 @@ function updateRecTimer() {
 }
 
 function finishCameraRecording() {
+  const recDuration = (Date.now() - recStartTime) / 1000;
   stopCameraStream();
   const blob = new Blob(recordedChunks, { type: recordedChunks[0]?.type || 'video/mp4' });
   const file = new File([blob], 'recording.webm', { type: blob.type });
@@ -546,11 +547,11 @@ function finishCameraRecording() {
   $('btn-select-video').className = 'btn btn-secondary';
   $('btn-record-video').style.display = 'none';
 
-  // Run validation
-  validateRecordedVideo(file, url);
+  // Run validation (pass known duration since MediaRecorder blobs often lack it)
+  validateRecordedVideo(file, url, recDuration);
 }
 
-async function validateRecordedVideo(file, url) {
+async function validateRecordedVideo(file, url, knownDuration) {
   $('req-size').textContent = '⏳ Checking size...';
   $('req-portrait').textContent = '⏳ Checking orientation...';
   $('req-duration').textContent = '⏳ Checking duration...';
@@ -572,9 +573,10 @@ async function validateRecordedVideo(file, url) {
     $('req-portrait').textContent = portraitOk
       ? `✅ Portrait (${meta.width}×${meta.height})`
       : `❌ Not portrait (${meta.width}×${meta.height})`;
+    const duration = (isFinite(meta.duration) && meta.duration > 0) ? meta.duration : knownDuration;
     const maxDuration = limitSec + Math.max(5, Math.round(limitSec * 0.15));
-    const durSec = Math.ceil(meta.duration);
-    durationOk = meta.duration <= maxDuration;
+    const durSec = Math.ceil(duration);
+    durationOk = duration <= maxDuration;
     $('req-duration').textContent = durationOk
       ? `✅ Duration: ${durSec}s (limit ~${limitSec}s)`
       : `❌ Too long: ${durSec}s — keep it under ${limitSec}s`;
