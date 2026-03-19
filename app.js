@@ -409,7 +409,7 @@ let recStartTime = 0;
 async function startCameraRecording() {
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1080 }, height: { ideal: 1920 } },
+      video: { facingMode: 'user', aspectRatio: { ideal: 9 / 16 }, height: { ideal: 1920 } },
       audio: true,
     });
     const preview = $('camera-live-preview');
