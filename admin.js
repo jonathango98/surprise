@@ -194,7 +194,7 @@ function renderSubmissions(subs) {
   tbody.innerHTML = '';
 
   if (!subs.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No submissions yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">No submissions yet</td></tr>';
     return;
   }
 
@@ -216,7 +216,6 @@ function renderSubmissions(subs) {
       <td style="white-space:nowrap;">${formatDatetime(sub.submittedAt)}</td>
       <td><div class="prompt-dots">${dotsHtml}</div></td>
       <td>${sub.photoCount || 0}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteSubmission('${sub.identifier}', '${sub.firstName} ${sub.lastName}')">Delete</button></td>
     `;
 
     tr.addEventListener('click', () => toggleExpanded(sub.identifier, tr));
@@ -226,7 +225,7 @@ function renderSubmissions(subs) {
     const expandTr = document.createElement('tr');
     expandTr.id = `expand-${sub.identifier}`;
     expandTr.style.display = 'none';
-    expandTr.innerHTML = '<td colspan="6"><div class="expanded-row-inner" style="padding:1rem 0;color:var(--text-muted);font-size:0.85rem;">Loading details...</div></td>';
+    expandTr.innerHTML = '<td colspan="5"><div class="expanded-row-inner" style="padding:1rem 0;color:var(--text-muted);font-size:0.85rem;">Loading details...</div></td>';
     tbody.appendChild(expandTr);
   });
 }
@@ -259,6 +258,7 @@ async function toggleExpanded(identifier, triggerRow) {
 function renderExpandedRow(container, data) {
   const clips = data.clips || {};
   const photos = data.photos || [];
+  const identifier = data.identifier;
 
   let html = '<div style="padding:0 0.75rem;">';
 
@@ -266,7 +266,10 @@ function renderExpandedRow(container, data) {
   html += '<div style="margin-bottom:0.75rem;"><strong style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Video Clips</strong><div class="clip-links" style="margin-top:0.4rem;">';
   [1, 2, 3, 4].forEach(n => {
     if (clips[`p${n}`]) {
+      html += `<div style="display:inline-flex;align-items:center;gap:0.3rem;margin-right:0.5rem;">`;
       html += `<a class="clip-link" href="${clips[`p${n}`]}" target="_blank" rel="noopener">Prompt ${n} ▶</a>`;
+      html += `<button class="btn btn-danger btn-sm" style="padding:0.15rem 0.4rem;font-size:0.7rem;min-width:auto;" onclick="event.stopPropagation(); deleteClip('${identifier}', ${n})">✕</button>`;
+      html += `</div>`;
     } else {
       html += `<span class="badge badge-muted">Prompt ${n} not recorded</span>`;
     }
@@ -296,23 +299,31 @@ function renderExpandedRow(container, data) {
 }
 
 // =============================================
-// DELETE SUBMISSION
+// DELETE CLIP
 // =============================================
-async function deleteSubmission(identifier, name) {
-  if (!confirm(`Delete all data for ${name}? This will mark their submission as deleted.`)) return;
+async function deleteClip(identifier, prompt) {
+  if (!confirm(`Delete prompt ${prompt} clip for this submission?`)) return;
 
   try {
-    showLoading(true, 'Deleting...');
-    await apiFetch(`/admin/submission/${identifier}`, {
+    showLoading(true, 'Deleting clip...');
+    await apiFetch(`/admin/submission/${identifier}/clip/${prompt}`, {
       method: 'DELETE',
     });
     showLoading(false);
 
-    // Remove from local list and re-render
-    submissions = submissions.filter(s => s.identifier !== identifier);
+    // Update local state
+    const sub = submissions.find(s => s.identifier === identifier);
+    if (sub) {
+      sub.completedPrompts = (sub.completedPrompts || []).filter(n => n !== prompt);
+    }
     renderStats(submissions);
     renderSubmissions(submissions);
-    showError('✅ Submission deleted.');
+
+    // Re-open the expanded row to refresh it
+    const mainRow = document.querySelector(`tr[data-identifier="${identifier}"]`);
+    if (mainRow) toggleExpanded(identifier, mainRow);
+
+    showError('✅ Clip deleted.');
   } catch (e) {
     showLoading(false);
     showError(e.message);
