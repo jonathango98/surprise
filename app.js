@@ -293,20 +293,14 @@ function startPromptUpload(n) {
   $('upload-duration-hint').textContent = `Keep it under ${state.currentPrompt.limit}s`;
 
   // Reset UI
-  $('video-file-input').value = '';
   $('upload-preview-video').style.display = 'none';
   $('upload-preview-video').src = '';
   $('upload-requirements').style.display = 'none';
   $('btn-confirm-upload').style.display = 'none';
-  $('btn-select-video').textContent = '📹 Choose from library';
-  $('btn-select-video').className = 'btn btn-secondary';
+  $('btn-record-video').textContent = '🎥 Record video';
   $('btn-record-video').style.display = '';
 
   showScreen('screen-upload');
-}
-
-function triggerVideoInput() {
-  $('video-file-input').click();
 }
 
 function cancelUpload() {
@@ -316,71 +310,6 @@ function cancelUpload() {
   }
   state.selectedFile = null;
   showDashboard();
-}
-
-async function handleVideoSelected(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  if (state.playbackUrl) {
-    URL.revokeObjectURL(state.playbackUrl);
-  }
-  state.selectedFile = file;
-
-  const url = URL.createObjectURL(file);
-  state.playbackUrl = url;
-
-  // Show preview
-  const previewVideo = $('upload-preview-video');
-  previewVideo.src = url;
-  previewVideo.style.display = 'block';
-
-  // Show requirements in loading state
-  $('upload-requirements').style.display = 'block';
-  $('req-size').textContent = '⏳ Checking size...';
-  $('req-portrait').textContent = '⏳ Checking orientation...';
-  $('req-duration').textContent = '⏳ Checking duration...';
-  $('btn-confirm-upload').style.display = 'none';
-  $('btn-select-video').textContent = 'Try a different video';
-  $('btn-select-video').className = 'btn btn-secondary';
-
-  // Size check (instant)
-  const MAX_BYTES = 50 * 1024 * 1024;
-  const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-  const sizeOk = file.size <= MAX_BYTES;
-  $('req-size').textContent = sizeOk
-    ? `✅ Size: ${sizeMB} MB (under 50 MB)`
-    : `❌ Too large: ${sizeMB} MB — max is 50 MB`;
-
-  // Portrait + duration checks via video metadata
-  let portraitOk = false;
-  let durationOk = false;
-  try {
-    const meta = await getVideoMetadata(url);
-    const limitSec = state.currentPrompt.limit;
-
-    portraitOk = meta.height > meta.width;
-    $('req-portrait').textContent = portraitOk
-      ? `✅ Portrait (${meta.width}×${meta.height})`
-      : `❌ Not portrait — upload a vertical video (yours: ${meta.width}×${meta.height})`;
-
-    const maxDuration = limitSec + Math.max(5, Math.round(limitSec * 0.15));
-    const durSec = Math.ceil(meta.duration);
-    durationOk = meta.duration <= maxDuration;
-    $('req-duration').textContent = durationOk
-      ? `✅ Duration: ${durSec}s (limit ~${limitSec}s)`
-      : `❌ Too long: ${durSec}s — keep it under ${limitSec}s`;
-  } catch (e) {
-    $('req-portrait').textContent = '❌ Could not read video info — try another file';
-    $('req-duration').textContent = '';
-  }
-
-  if (sizeOk && portraitOk && durationOk) {
-    $('btn-confirm-upload').style.display = 'flex';
-  }
-
-  // Reset so re-selecting the same file re-triggers the change event
-  event.target.value = '';
 }
 
 function getVideoMetadata(url) {
@@ -543,9 +472,8 @@ function finishCameraRecording() {
   previewVideo.style.display = 'block';
 
   $('upload-requirements').style.display = 'block';
-  $('btn-select-video').textContent = 'Try a different video';
-  $('btn-select-video').className = 'btn btn-secondary';
-  $('btn-record-video').style.display = 'none';
+  $('btn-record-video').textContent = '🔄 Re-record';
+  $('btn-record-video').style.display = '';
 
   // Run validation (pass known duration since MediaRecorder blobs often lack it)
   validateRecordedVideo(file, url, recDuration);

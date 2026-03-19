@@ -130,9 +130,6 @@
       <div id="upload-prompt-text" style="font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:0.25rem;">Prompt goes here</div>
       <div id="upload-duration-hint" style="font-size:0.85rem;color:rgba(255,255,255,0.45);margin-bottom:1.25rem;">Keep it under 10s</div>
 
-      <!-- Hidden file input -->
-      <input type="file" id="video-file-input" accept="video/*" style="display:none;" onchange="handleVideoSelected(event)">
-
       <!-- Video preview -->
       <video id="upload-preview-video" playsinline controls style="display:none;width:100%;max-height:45vh;border-radius:12px;background:#000;margin-bottom:1rem;"></video>
 
@@ -144,7 +141,6 @@
       </div>
 
       <button class="btn btn-primary" id="btn-record-video" onclick="startCameraRecording()" style="margin-bottom:0.5rem;">🎥 Record video</button>
-      <button class="btn btn-secondary" id="btn-select-video" onclick="triggerVideoInput()">📹 Choose from library</button>
       <button class="btn btn-primary" id="btn-confirm-upload" onclick="confirmVideo()" style="display:none;margin-top:0.75rem;">Upload ✓</button>
 
       <div style="height:2rem;"></div>
