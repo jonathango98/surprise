@@ -151,6 +151,12 @@ input, button, textarea {
   border: 1px solid var(--border);
 }
 
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
 .btn-danger {
   background: var(--danger);
   color: white;

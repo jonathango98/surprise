@@ -298,6 +298,7 @@ function startPromptUpload(n) {
   $('upload-requirements').style.display = 'none';
   $('btn-confirm-upload').style.display = 'none';
   $('btn-record-video').textContent = '🎥 Record video';
+  $('btn-record-video').classList.replace('btn-ghost', 'btn-primary');
   $('btn-record-video').style.display = '';
 
   showScreen('screen-upload');
@@ -490,6 +491,7 @@ function finishCameraRecording() {
   $('upload-rules').style.display = 'none';
   $('upload-requirements').style.display = 'block';
   $('btn-record-video').textContent = '🔄 Re-record';
+  $('btn-record-video').classList.replace('btn-primary', 'btn-ghost');
   $('btn-record-video').style.display = '';
 
   // Run validation (pass known duration since MediaRecorder blobs often lack it)
