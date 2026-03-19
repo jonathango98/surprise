@@ -337,6 +337,21 @@ let recStartTime = 0;
 let canvasStream = null;
 let canvasAnimFrame = null;
 
+// Landscape orientation warning
+function checkLandscapeWarning() {
+  const warning = $('landscape-warning');
+  if (!warning) return;
+  const isRecordingScreen = $('screen-camera-record').classList.contains('active');
+  if (!isRecordingScreen) {
+    warning.style.display = 'none';
+    return;
+  }
+  const isLandscape = window.innerWidth > window.innerHeight;
+  warning.style.display = isLandscape ? 'flex' : 'none';
+}
+window.addEventListener('orientationchange', () => setTimeout(checkLandscapeWarning, 100));
+window.addEventListener('resize', checkLandscapeWarning);
+
 async function startCameraRecording() {
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -404,6 +419,7 @@ async function startCameraRecording() {
     mediaRecorder = null;
     recordedChunks = [];
     $('screen-camera-record').classList.add('active');
+    checkLandscapeWarning();
   } catch (e) {
     alert('Could not access camera. Please allow camera access or use "Choose from library" instead.');
   }
