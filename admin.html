@@ -103,6 +103,18 @@
         </div>
       </div>
 
+      <!-- Bucket Explorer -->
+      <div class="admin-section">
+        <h2>🗂️ Bucket Explorer</h2>
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" style="width:auto;" onclick="loadBucket()">Load / Refresh</button>
+          <span id="bucket-summary" class="muted" style="font-size:0.82rem;"></span>
+        </div>
+        <div id="bucket-tree">
+          <p class="muted" style="font-size:0.85rem;">Click "Load / Refresh" to browse all files in S3.</p>
+        </div>
+      </div>
+
       <!-- Submissions -->
       <div class="admin-section">
         <h2>👥 Submissions</h2>
@@ -128,6 +140,18 @@
     </div>
   </div>
 
+
+  <!-- Bucket File Preview Modal -->
+  <div id="bucket-preview-overlay" class="overlay" style="z-index:500;padding:1rem;" onclick="closeBucketPreview()">
+    <div class="bkt-preview-card" onclick="event.stopPropagation()">
+      <p id="bucket-preview-label" class="muted" style="font-size:0.78rem;margin-bottom:0.75rem;word-break:break-all;text-align:left;"></p>
+      <div id="bucket-preview-media" style="line-height:0;text-align:center;"></div>
+      <div class="btn-row" style="margin-top:1rem;">
+        <a id="bucket-preview-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Open in new tab ↗</a>
+        <button class="btn btn-secondary btn-sm" onclick="closeBucketPreview()">Close</button>
+      </div>
+    </div>
+  </div>
 
   <script src="config.js"></script>
   <script src="admin.js"></script>

@@ -1033,3 +1033,117 @@ body:has(.admin-layout) {
   border-color: var(--success);
   color: white;
 }
+
+/* =============================================
+   BUCKET EXPLORER
+   ============================================= */
+.bkt-root {
+  font-size: 0.85rem;
+}
+
+.bkt-dir {
+  margin-bottom: 1px;
+}
+
+.bkt-dir-hd {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+
+.bkt-dir-hd:hover {
+  background: var(--surface2);
+}
+
+.bkt-arrow {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  width: 0.9rem;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.bkt-icon {
+  flex-shrink: 0;
+}
+
+.bkt-dir-name {
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bkt-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.bkt-dir-children {
+  padding-left: 1.4rem;
+  border-left: 1px solid var(--border);
+  margin-left: 0.9rem;
+  margin-top: 1px;
+  margin-bottom: 2px;
+}
+
+.bkt-file {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: background 0.1s;
+}
+
+.bkt-file:hover {
+  background: var(--surface2);
+}
+
+.bkt-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.bkt-file-size {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 52px;
+  text-align: right;
+}
+
+.bkt-file-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.bkt-btn {
+  padding: 0.15rem 0.45rem !important;
+  font-size: 0.72rem !important;
+  min-width: auto !important;
+  line-height: 1.4;
+}
+
+.bkt-preview-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  width: 100%;
+  max-width: 700px;
+  box-shadow: var(--shadow);
+}

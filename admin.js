@@ -387,6 +387,172 @@ async function deleteSubmission(identifier, name) {
 }
 
 // =============================================
+// BUCKET EXPLORER
+// =============================================
+let bucketObjects = [];
+
+async function loadBucket() {
+  const treeEl = $('bucket-tree');
+  const summaryEl = $('bucket-summary');
+  treeEl.innerHTML = '<p class="muted" style="font-size:0.85rem;">Loading...</p>';
+  summaryEl.textContent = '';
+  try {
+    const data = await apiFetch('/admin/bucket');
+    bucketObjects = data.objects || [];
+    summaryEl.textContent = `${bucketObjects.length} file${bucketObjects.length !== 1 ? 's' : ''}`;
+    renderBucketTree(bucketObjects);
+  } catch (e) {
+    treeEl.innerHTML = `<p class="muted" style="font-size:0.85rem;">Error: ${escapeHtml(e.message)}</p>`;
+    summaryEl.textContent = '';
+  }
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function buildBucketTree(objects) {
+  const root = { _files: [], _dirs: {} };
+  for (const obj of objects) {
+    const parts = obj.key.split('/').filter(Boolean);
+    let node = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const dir = parts[i];
+      if (!node._dirs[dir]) node._dirs[dir] = { _files: [], _dirs: {} };
+      node = node._dirs[dir];
+    }
+    const fileName = parts[parts.length - 1];
+    if (fileName) node._files.push({ name: fileName, ...obj });
+  }
+  return root;
+}
+
+function countBucketFiles(node) {
+  let n = node._files.length;
+  for (const child of Object.values(node._dirs)) n += countBucketFiles(child);
+  return n;
+}
+
+function formatFileSize(bytes) {
+  if (bytes == null) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+function renderBucketNode(node, depth) {
+  let html = '';
+
+  const dirs = Object.entries(node._dirs).sort(([a], [b]) => a.localeCompare(b));
+  for (const [name, child] of dirs) {
+    const count = countBucketFiles(child);
+    const id = 'bdir_' + Math.random().toString(36).slice(2);
+    const open = depth > 0 && count <= 10;
+    html += `
+      <div class="bkt-dir">
+        <div class="bkt-dir-hd" onclick="toggleBucketDir('${id}')">
+          <span class="bkt-arrow" id="${id}_arr">${open ? '▼' : '▶'}</span>
+          <span class="bkt-icon">📁</span>
+          <span class="bkt-dir-name">${escapeHtml(name)}</span>
+          <span class="bkt-count">${count} file${count !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="bkt-dir-children" id="${id}" style="display:${open ? 'block' : 'none'};">
+          ${renderBucketNode(child, depth + 1)}
+        </div>
+      </div>`;
+  }
+
+  const files = [...node._files].sort((a, b) => a.name.localeCompare(b.name));
+  for (const file of files) {
+    const isVideo = /\.(mp4|webm|mov|avi)$/i.test(file.name);
+    const isImage = /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(file.name);
+    const icon = isVideo ? '🎬' : isImage ? '🖼️' : '📄';
+    const safeKey = file.key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    html += `
+      <div class="bkt-file">
+        <span class="bkt-icon">${icon}</span>
+        <span class="bkt-file-name" title="${escapeHtml(file.key)}">${escapeHtml(file.name)}</span>
+        <span class="bkt-file-size">${formatFileSize(file.size)}</span>
+        <div class="bkt-file-actions">
+          <button class="btn btn-secondary btn-sm bkt-btn" onclick="openBucketFile('${safeKey}')">Open</button>
+          <button class="btn btn-danger btn-sm bkt-btn" onclick="deleteBucketFile('${safeKey}')">✕</button>
+        </div>
+      </div>`;
+  }
+
+  return html;
+}
+
+function renderBucketTree(objects) {
+  const treeEl = $('bucket-tree');
+  if (!objects.length) {
+    treeEl.innerHTML = '<p class="muted" style="font-size:0.85rem;">Bucket is empty.</p>';
+    return;
+  }
+  const tree = buildBucketTree(objects);
+  treeEl.innerHTML = `<div class="bkt-root">${renderBucketNode(tree, 0)}</div>`;
+}
+
+function toggleBucketDir(id) {
+  const el = $(id);
+  const arr = $(`${id}_arr`);
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if (arr) arr.textContent = open ? '▶' : '▼';
+}
+
+function openBucketFile(key) {
+  const obj = bucketObjects.find(o => o.key === key);
+  if (!obj) return;
+  const isVideo = /\.(mp4|webm|mov|avi)$/i.test(key);
+  const isImage = /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(key);
+
+  if (!isVideo && !isImage) {
+    window.open(obj.url, '_blank', 'noopener');
+    return;
+  }
+
+  $('bucket-preview-label').textContent = obj.key;
+  $('bucket-preview-link').href = obj.url;
+  const mediaEl = $('bucket-preview-media');
+  if (isVideo) {
+    mediaEl.innerHTML = `<video src="${obj.url}" controls style="max-width:100%;max-height:60vh;border-radius:8px;"></video>`;
+  } else {
+    mediaEl.innerHTML = `<img src="${obj.url}" style="max-width:100%;max-height:60vh;border-radius:8px;object-fit:contain;">`;
+  }
+  $('bucket-preview-overlay').classList.add('active');
+}
+
+function closeBucketPreview() {
+  $('bucket-preview-overlay').classList.remove('active');
+  $('bucket-preview-media').innerHTML = '';
+}
+
+async function deleteBucketFile(key) {
+  const fileName = key.split('/').pop();
+  if (!confirm(`Delete "${fileName}" from the bucket?\n\n${key}\n\nThis cannot be undone.`)) return;
+
+  try {
+    showLoading(true, 'Deleting...');
+    await apiFetch('/admin/bucket/file', {
+      method: 'DELETE',
+      body: JSON.stringify({ key }),
+    });
+    showLoading(false);
+    bucketObjects = bucketObjects.filter(o => o.key !== key);
+    $('bucket-summary').textContent = `${bucketObjects.length} file${bucketObjects.length !== 1 ? 's' : ''}`;
+    renderBucketTree(bucketObjects);
+    showError('✅ File deleted.');
+  } catch (e) {
+    showLoading(false);
+    showError(e.message);
+  }
+}
+
+// =============================================
 // DOWNLOADS
 // =============================================
 function downloadZip(prompt) {
