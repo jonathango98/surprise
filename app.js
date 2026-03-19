@@ -467,6 +467,9 @@ function showPlayback(blob) {
   const video = $('playback-video');
   video.src = url;
   video.load();
+  video.onloadeddata = () => {
+    video.currentTime = 0.001;
+  };
   video.play().catch(() => {});
 
   showScreen('screen-playback');
