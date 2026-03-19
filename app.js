@@ -295,6 +295,7 @@ function startPromptUpload(n) {
   // Reset UI
   $('upload-preview-video').style.display = 'none';
   $('upload-preview-video').src = '';
+  $('upload-rules').style.display = '';
   $('upload-requirements').style.display = 'none';
   $('btn-confirm-upload').style.display = 'none';
   $('btn-record-video').textContent = '🎥 Record video';
@@ -487,6 +488,7 @@ function finishCameraRecording() {
   previewVideo.src = url;
   previewVideo.style.display = 'block';
 
+  $('upload-rules').style.display = 'none';
   $('upload-requirements').style.display = 'block';
   $('btn-record-video').textContent = '🔄 Re-record';
   $('btn-record-video').style.display = '';
