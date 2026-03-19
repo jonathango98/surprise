@@ -194,7 +194,7 @@ function renderSubmissions(subs) {
   tbody.innerHTML = '';
 
   if (!subs.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">No submissions yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No submissions yet</td></tr>';
     return;
   }
 
@@ -216,6 +216,7 @@ function renderSubmissions(subs) {
       <td style="white-space:nowrap;">${formatDatetime(sub.submittedAt)}</td>
       <td><div class="prompt-dots">${dotsHtml}</div></td>
       <td>${sub.photoCount || 0}</td>
+      <td><button class="btn btn-danger btn-sm" style="padding:0.2rem 0.5rem;font-size:0.75rem;min-width:auto;" onclick="event.stopPropagation(); deleteSubmission('${sub.identifier}', '${sub.firstName} ${sub.lastName}')">Delete</button></td>
     `;
 
     tr.addEventListener('click', () => toggleExpanded(sub.identifier, tr));
@@ -225,7 +226,7 @@ function renderSubmissions(subs) {
     const expandTr = document.createElement('tr');
     expandTr.id = `expand-${sub.identifier}`;
     expandTr.style.display = 'none';
-    expandTr.innerHTML = '<td colspan="5"><div class="expanded-row-inner" style="padding:1rem 0;color:var(--text-muted);font-size:0.85rem;">Loading details...</div></td>';
+    expandTr.innerHTML = '<td colspan="6"><div class="expanded-row-inner" style="padding:1rem 0;color:var(--text-muted);font-size:0.85rem;">Loading details...</div></td>';
     tbody.appendChild(expandTr);
   });
 }
@@ -279,12 +280,13 @@ function renderExpandedRow(container, data) {
   // Photos
   if (photos.length) {
     html += '<div><strong style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Photos</strong><div class="photo-thumbs" style="margin-top:0.4rem;">';
-    photos.forEach(photo => {
+    photos.forEach((photo, index) => {
       html += `
         <div style="position:relative;">
           <a href="${photo.url}" target="_blank" rel="noopener">
             <img src="${photo.url}" alt="Photo" class="photo-thumb-admin">
           </a>
+          <button class="btn btn-danger btn-sm" style="position:absolute;top:2px;right:2px;padding:0.1rem 0.35rem;font-size:0.65rem;min-width:auto;opacity:0.85;" onclick="event.stopPropagation(); deletePhoto('${identifier}', ${index})">✕</button>
           ${photo.wish ? `<div style="font-size:0.75rem;max-width:80px;margin-top:0.25rem;color:var(--text-muted);word-break:break-word;">"${photo.wish}"</div>` : ''}
         </div>
       `;
@@ -324,6 +326,60 @@ async function deleteClip(identifier, prompt) {
     if (mainRow) toggleExpanded(identifier, mainRow);
 
     showError('✅ Clip deleted.');
+  } catch (e) {
+    showLoading(false);
+    showError(e.message);
+  }
+}
+
+// =============================================
+// DELETE PHOTO
+// =============================================
+async function deletePhoto(identifier, index) {
+  if (!confirm(`Delete photo #${index + 1} from this submission?`)) return;
+
+  try {
+    showLoading(true, 'Deleting photo...');
+    await apiFetch(`/admin/submission/${identifier}/photo/${index}`, {
+      method: 'DELETE',
+    });
+    showLoading(false);
+
+    // Update local photoCount
+    const sub = submissions.find(s => s.identifier === identifier);
+    if (sub && sub.photoCount > 0) sub.photoCount--;
+    renderStats(submissions);
+    renderSubmissions(submissions);
+
+    // Re-open the expanded row to refresh it
+    const mainRow = document.querySelector(`tr[data-identifier="${identifier}"]`);
+    if (mainRow) toggleExpanded(identifier, mainRow);
+
+    showError('✅ Photo deleted.');
+  } catch (e) {
+    showLoading(false);
+    showError(e.message);
+  }
+}
+
+// =============================================
+// DELETE SUBMISSION
+// =============================================
+async function deleteSubmission(identifier, name) {
+  if (!confirm(`Delete entire submission for "${name}"?\n\nThis will permanently remove all clips and photos from storage.`)) return;
+
+  try {
+    showLoading(true, 'Deleting submission...');
+    await apiFetch(`/admin/submission/${identifier}`, {
+      method: 'DELETE',
+    });
+    showLoading(false);
+
+    submissions = submissions.filter(s => s.identifier !== identifier);
+    renderStats(submissions);
+    renderSubmissions(submissions);
+
+    showError('✅ Submission deleted.');
   } catch (e) {
     showLoading(false);
     showError(e.message);
