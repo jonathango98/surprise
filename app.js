@@ -17,7 +17,7 @@ const PROMPTS = [
 // STATE
 // =============================================
 const state = {
-  session: null,          // { firstName, lastName, location, identifier, completedPrompts, photoCount, timestamps }
+  session: null,          // { firstName, lastName, identifier, completedPrompts, photoCount, timestamps }
   currentPrompt: null,    // prompt config { n, text, limit }
   pendingRetakePrompt: null,
   selectedFile: null,     // File object chosen for upload
@@ -154,9 +154,8 @@ async function checkDeadline() {
 async function submitForm() {
   const firstName = $('input-firstname').value.trim();
   const lastName = $('input-lastname').value.trim();
-  const location = $('input-location').value.trim();
 
-  if (!firstName || !lastName || !location) {
+  if (!firstName || !lastName) {
     showError('Please fill in all fields.');
     return;
   }
@@ -165,14 +164,13 @@ async function submitForm() {
     showLoading(true, 'Getting started...');
     const data = await apiFetch('/session', {
       method: 'POST',
-      body: JSON.stringify({ firstName, lastName, location }),
+      body: JSON.stringify({ firstName, lastName }),
     });
     showLoading(false);
 
     state.session = {
       firstName,
       lastName,
-      location,
       identifier: data.identifier,
       completedPrompts: data.completedPrompts || [],
       photoCount: data.photoCount || 0,
