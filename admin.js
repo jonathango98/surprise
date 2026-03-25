@@ -12,6 +12,8 @@ const BACKEND_URL = (typeof window !== 'undefined' && window.BACKEND_URL)
 let adminToken = null;
 let submissions = [];
 let expandedRow = null;
+let sortKey = 'submittedAt';
+let sortDir = 'desc';
 
 // =============================================
 // UTILITIES
@@ -189,16 +191,59 @@ function renderStats(subs) {
   $('stat-photos').textContent = subs.reduce((acc, s) => acc + (s.photoCount || 0), 0);
 }
 
+function sortedSubmissions(subs) {
+  return [...subs].sort((a, b) => {
+    let va, vb;
+    if (sortKey === 'name') {
+      va = `${a.firstName} ${a.lastName}`.toLowerCase();
+      vb = `${b.firstName} ${b.lastName}`.toLowerCase();
+    } else if (sortKey === 'submittedAt') {
+      va = new Date(a.submittedAt).getTime();
+      vb = new Date(b.submittedAt).getTime();
+    } else if (sortKey === 'photos') {
+      va = a.photoCount || 0;
+      vb = b.photoCount || 0;
+    } else {
+      return 0;
+    }
+    if (va < vb) return sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+function setSort(key) {
+  if (sortKey === key) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortKey = key;
+    sortDir = key === 'submittedAt' ? 'desc' : 'asc';
+  }
+  renderSubmissions(submissions);
+}
+
 function renderSubmissions(subs) {
   const tbody = $('submissions-tbody');
   tbody.innerHTML = '';
+
+  // Update header sort indicators
+  ['name', 'submittedAt', 'photos'].forEach(key => {
+    const th = $(`th-${key}`);
+    if (!th) return;
+    const arrow = th.querySelector('.sort-arrow');
+    if (sortKey === key) {
+      arrow.textContent = sortDir === 'asc' ? ' ▲' : ' ▼';
+    } else {
+      arrow.textContent = ' ⇅';
+    }
+  });
 
   if (!subs.length) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No submissions yet</td></tr>';
     return;
   }
 
-  subs.forEach((sub) => {
+  sortedSubmissions(subs).forEach((sub) => {
     const completed = sub.completedPrompts || [];
 
     // Main row

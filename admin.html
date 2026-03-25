@@ -122,10 +122,10 @@
           <table class="admin-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Submitted</th>
+                <th id="th-name" onclick="setSort('name')" style="cursor:pointer;user-select:none;">Name<span class="sort-arrow"> ⇅</span></th>
+                <th id="th-submittedAt" onclick="setSort('submittedAt')" style="cursor:pointer;user-select:none;">Submitted<span class="sort-arrow"> ▼</span></th>
                 <th>Prompts</th>
-                <th>Photos</th>
+                <th id="th-photos" onclick="setSort('photos')" style="cursor:pointer;user-select:none;">Photos<span class="sort-arrow"> ⇅</span></th>
                 <th></th>
               </tr>
             </thead>
