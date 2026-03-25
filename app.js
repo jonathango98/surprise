@@ -127,6 +127,12 @@ async function checkDeadline() {
       showScreen('screen-closed');
       return;
     }
+    if (data.deadline) {
+      const d = new Date(data.deadline);
+      const formatted = d.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+      $('form-deadline-date').textContent = formatted;
+      $('form-deadline-text').style.display = '';
+    }
   } catch (e) {
     showLoading(false);
     console.warn('Deadline check failed, continuing:', e.message);
