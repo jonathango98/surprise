@@ -206,6 +206,24 @@ function renderDashboard() {
   const container = $('cards-container');
   container.innerHTML = '';
 
+  // Photo card (always unlocked)
+  const photoCompleted = (photoCount || 0) > 0;
+
+  const photoCard = document.createElement('div');
+  photoCard.className = `card${photoCompleted ? ' completed' : ''}`;
+  photoCard.innerHTML = `
+    <div class="card-icon">${photoCompleted ? '✅' : '📸'}</div>
+    <div class="card-content">
+      <div class="card-title">Photos with Sharon</div>
+      <div class="card-subtitle">Share your favourite moments</div>
+      ${photoCompleted ? `<div class="card-meta">${photoCount} photo${photoCount !== 1 ? 's' : ''} uploaded</div>` : ''}
+    </div>
+    <div class="card-arrow">›</div>
+  `;
+
+  photoCard.addEventListener('click', () => showPhotos());
+  container.appendChild(photoCard);
+
   // Video prompt cards 1–4
   PROMPTS.forEach((prompt) => {
     const n = prompt.n;
@@ -234,24 +252,6 @@ function renderDashboard() {
     card.addEventListener('click', () => handlePromptCardTap(n, completed));
     container.appendChild(card);
   });
-
-  // Photo card (always unlocked)
-  const photoCompleted = (photoCount || 0) > 0;
-
-  const photoCard = document.createElement('div');
-  photoCard.className = `card${photoCompleted ? ' completed' : ''}`;
-  photoCard.innerHTML = `
-    <div class="card-icon">${photoCompleted ? '✅' : '📸'}</div>
-    <div class="card-content">
-      <div class="card-title">Photos with Sharon</div>
-      <div class="card-subtitle">Share your favourite moments</div>
-      ${photoCompleted ? `<div class="card-meta">${photoCount} photo${photoCount !== 1 ? 's' : ''} uploaded</div>` : ''}
-    </div>
-    <div class="card-arrow">›</div>
-  `;
-
-  photoCard.addEventListener('click', () => showPhotos());
-  container.appendChild(photoCard);
 
   // Show celebration button once all 4 video prompts done
   const allVideoDone = [1, 2, 3, 4].every(n => completedPrompts.includes(n));
