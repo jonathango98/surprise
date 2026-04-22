@@ -651,7 +651,8 @@ async function uploadClip() {
 
       xhr.upload.onload = () => {
         progressBar.style.width = '60%';
-        progressLabel.textContent = 'Converting to WebM… this may take a moment';
+        const isWebm = file.name.toLowerCase().endsWith('.webm');
+        progressLabel.textContent = isWebm ? 'Saving to storage…' : 'Converting to WebM… (may take 30–90s for long clips)';
       };
 
       xhr.onload = () => {
