@@ -223,16 +223,18 @@ function setSort(key) {
 }
 
 function populateUploadDropdown(subs) {
-  const select = $('upload-identifier');
-  const current = select.value;
-  select.innerHTML = '<option value="">Select account...</option>';
-  sortedSubmissions(subs).forEach(sub => {
-    const opt = document.createElement('option');
-    opt.value = sub.identifier;
-    opt.textContent = `${sub.firstName} ${sub.lastName} (${sub.identifier})`;
-    select.appendChild(opt);
-  });
-  if (current) select.value = current;
+  for (const id of ['upload-identifier', 'photo-upload-identifier']) {
+    const select = $(id);
+    const current = select.value;
+    select.innerHTML = '<option value="">Select account...</option>';
+    sortedSubmissions(subs).forEach(sub => {
+      const opt = document.createElement('option');
+      opt.value = sub.identifier;
+      opt.textContent = `${sub.firstName} ${sub.lastName} (${sub.identifier})`;
+      select.appendChild(opt);
+    });
+    if (current) select.value = current;
+  }
 }
 
 function renderSubmissions(subs) {
@@ -675,6 +677,77 @@ async function uploadClip() {
     fileInput.value = '';
     setTimeout(() => { progressWrap.style.display = 'none'; }, 3000);
     showError('✅ Clip uploaded and converted successfully!');
+  } catch (e) {
+    progressWrap.style.display = 'none';
+    showError(e.message);
+  }
+}
+
+// =============================================
+// UPLOAD PHOTO
+// =============================================
+async function uploadPhoto() {
+  const identifier = $('photo-upload-identifier').value;
+  const fileInput = $('photo-upload-file');
+  const wish = $('photo-upload-wish').value.trim();
+  const file = fileInput.files[0];
+
+  if (!identifier) { showError('Please select an account.'); return; }
+  if (!file) { showError('Please select a photo.'); return; }
+
+  const progressWrap = $('photo-upload-progress');
+  const progressBar = $('photo-upload-progress-bar');
+  const progressLabel = $('photo-upload-progress-label');
+
+  progressWrap.style.display = 'block';
+  progressBar.style.width = '0%';
+  progressLabel.textContent = 'Uploading...';
+
+  const formData = new FormData();
+  formData.append('identifier', identifier);
+  formData.append('file', file);
+  if (wish) formData.append('wish', wish);
+
+  try {
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${BACKEND_URL}/admin/upload-photo`);
+      xhr.setRequestHeader('Authorization', `Bearer ${adminToken}`);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 90);
+          progressBar.style.width = `${pct}%`;
+          progressLabel.textContent = `Uploading… ${Math.round(pct / 0.9)}%`;
+        }
+      };
+
+      xhr.upload.onload = () => {
+        progressBar.style.width = '95%';
+        progressLabel.textContent = 'Saving…';
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 401) { adminLogout(); reject(new Error('Session expired.')); return; }
+        if (xhr.status >= 200 && xhr.status < 300) {
+          progressBar.style.width = '100%';
+          progressLabel.textContent = 'Done!';
+          resolve();
+        } else {
+          try { reject(new Error(JSON.parse(xhr.responseText).error || `Upload failed (${xhr.status})`)); }
+          catch { reject(new Error(`Upload failed (${xhr.status})`)); }
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(formData);
+    });
+
+    await loadSubmissions();
+    fileInput.value = '';
+    $('photo-upload-wish').value = '';
+    setTimeout(() => { progressWrap.style.display = 'none'; }, 3000);
+    showError('✅ Photo uploaded successfully!');
   } catch (e) {
     progressWrap.style.display = 'none';
     showError(e.message);

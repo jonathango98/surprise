@@ -135,6 +135,33 @@
         <button class="btn btn-primary" style="margin-top:1rem;" onclick="uploadClip()">Upload &amp; Convert</button>
       </div>
 
+      <!-- Upload Photo -->
+      <div class="admin-section">
+        <h2>🖼️ Upload Photo</h2>
+        <p class="muted" style="margin-bottom:1rem;">Upload a photo and add it to an account's submission.</p>
+        <div class="field">
+          <label>Account</label>
+          <select id="photo-upload-identifier" class="input">
+            <option value="">Select account...</option>
+          </select>
+        </div>
+        <div class="field" style="margin-top:0.75rem;">
+          <label>Photo (jpg, png, webp, heic)</label>
+          <input id="photo-upload-file" class="input" type="file" accept=".jpg,.jpeg,.png,.webp,.heic,image/*">
+        </div>
+        <div class="field" style="margin-top:0.75rem;">
+          <label>Wish / caption <span class="muted">(optional)</span></label>
+          <input id="photo-upload-wish" class="input" type="text" placeholder="e.g. Happy Birthday Sharon!">
+        </div>
+        <div id="photo-upload-progress" style="display:none;margin-top:0.75rem;">
+          <div style="background:var(--border,#e0e0e0);border-radius:4px;height:8px;overflow:hidden;">
+            <div id="photo-upload-progress-bar" style="height:100%;background:var(--accent,#7c3aed);width:0%;transition:width 0.3s;"></div>
+          </div>
+          <p id="photo-upload-progress-label" class="muted" style="font-size:0.82rem;margin-top:0.35rem;text-align:center;"></p>
+        </div>
+        <button class="btn btn-primary" style="margin-top:1rem;" onclick="uploadPhoto()">Upload Photo</button>
+      </div>
+
       <!-- Bucket Explorer -->
       <div class="admin-section">
         <h2>🗂️ Bucket Explorer</h2>
