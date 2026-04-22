@@ -103,6 +103,38 @@
         </div>
       </div>
 
+      <!-- Upload Clip -->
+      <div class="admin-section">
+        <h2>📤 Upload Clip</h2>
+        <p class="muted" style="margin-bottom:1rem;">Upload a .mp4 or .mov — it will be converted to WebM and saved as a submission clip.</p>
+        <div class="field">
+          <label>Account</label>
+          <select id="upload-identifier" class="input">
+            <option value="">Select account...</option>
+          </select>
+        </div>
+        <div class="field" style="margin-top:0.75rem;">
+          <label>Prompt</label>
+          <select id="upload-prompt" class="input">
+            <option value="1">Prompt 1 — In one word, describe Sharon</option>
+            <option value="2">Prompt 2 — What are you most grateful for about Sharon?</option>
+            <option value="3">Prompt 3 — Share your wishes for Sharon!</option>
+            <option value="4">Prompt 4 — Say Happy Birthday Sharon!</option>
+          </select>
+        </div>
+        <div class="field" style="margin-top:0.75rem;">
+          <label>Video File (.mp4 or .mov)</label>
+          <input id="upload-file" class="input" type="file" accept=".mp4,.mov,video/mp4,video/quicktime">
+        </div>
+        <div id="upload-progress" style="display:none;margin-top:0.75rem;">
+          <div style="background:var(--border,#e0e0e0);border-radius:4px;height:8px;overflow:hidden;">
+            <div id="upload-progress-bar" style="height:100%;background:var(--accent,#7c3aed);width:0%;transition:width 0.3s;"></div>
+          </div>
+          <p id="upload-progress-label" class="muted" style="font-size:0.82rem;margin-top:0.35rem;text-align:center;"></p>
+        </div>
+        <button class="btn btn-primary" style="margin-top:1rem;" onclick="uploadClip()">Upload &amp; Convert</button>
+      </div>
+
       <!-- Bucket Explorer -->
       <div class="admin-section">
         <h2>🗂️ Bucket Explorer</h2>

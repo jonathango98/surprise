@@ -222,7 +222,21 @@ function setSort(key) {
   renderSubmissions(submissions);
 }
 
+function populateUploadDropdown(subs) {
+  const select = $('upload-identifier');
+  const current = select.value;
+  select.innerHTML = '<option value="">Select account...</option>';
+  sortedSubmissions(subs).forEach(sub => {
+    const opt = document.createElement('option');
+    opt.value = sub.identifier;
+    opt.textContent = `${sub.firstName} ${sub.lastName} (${sub.identifier})`;
+    select.appendChild(opt);
+  });
+  if (current) select.value = current;
+}
+
 function renderSubmissions(subs) {
+  populateUploadDropdown(subs);
   const tbody = $('submissions-tbody');
   tbody.innerHTML = '';
 
@@ -592,6 +606,76 @@ async function deleteBucketFile(key) {
     showError('✅ File deleted.');
   } catch (e) {
     showLoading(false);
+    showError(e.message);
+  }
+}
+
+// =============================================
+// UPLOAD CLIP
+// =============================================
+async function uploadClip() {
+  const identifier = $('upload-identifier').value;
+  const prompt = $('upload-prompt').value;
+  const fileInput = $('upload-file');
+  const file = fileInput.files[0];
+
+  if (!identifier) { showError('Please select an account.'); return; }
+  if (!file) { showError('Please select a video file.'); return; }
+
+  const progressWrap = $('upload-progress');
+  const progressBar = $('upload-progress-bar');
+  const progressLabel = $('upload-progress-label');
+
+  progressWrap.style.display = 'block';
+  progressBar.style.width = '0%';
+  progressLabel.textContent = 'Uploading...';
+
+  const formData = new FormData();
+  formData.append('identifier', identifier);
+  formData.append('prompt', prompt);
+  formData.append('file', file);
+
+  try {
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${BACKEND_URL}/admin/upload-clip`);
+      xhr.setRequestHeader('Authorization', `Bearer ${adminToken}`);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 50);
+          progressBar.style.width = `${pct}%`;
+          progressLabel.textContent = `Uploading… ${pct * 2}%`;
+        }
+      };
+
+      xhr.upload.onload = () => {
+        progressBar.style.width = '60%';
+        progressLabel.textContent = 'Converting to WebM… this may take a moment';
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 401) { adminLogout(); reject(new Error('Session expired.')); return; }
+        if (xhr.status >= 200 && xhr.status < 300) {
+          progressBar.style.width = '100%';
+          progressLabel.textContent = 'Done!';
+          resolve();
+        } else {
+          try { reject(new Error(JSON.parse(xhr.responseText).error || `Upload failed (${xhr.status})`)); }
+          catch { reject(new Error(`Upload failed (${xhr.status})`)); }
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(formData);
+    });
+
+    await loadSubmissions();
+    fileInput.value = '';
+    setTimeout(() => { progressWrap.style.display = 'none'; }, 3000);
+    showError('✅ Clip uploaded and converted successfully!');
+  } catch (e) {
+    progressWrap.style.display = 'none';
     showError(e.message);
   }
 }
