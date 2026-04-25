@@ -12,7 +12,7 @@ const BACKEND_URL = (typeof window !== 'undefined' && window.BACKEND_URL)
 let adminToken = null;
 let submissions = [];
 let expandedRow = null;
-let sortKey = 'submittedAt';
+let sortKey = 'lastActivityAt';
 let sortDir = 'desc';
 
 // =============================================
@@ -132,6 +132,7 @@ async function showDashboard() {
     await Promise.all([
       loadDeadline(),
       loadSubmissions(),
+      loadActivityLog(),
     ]);
     showLoading(false);
   } catch (e) {
@@ -200,6 +201,9 @@ function sortedSubmissions(subs) {
     } else if (sortKey === 'submittedAt') {
       va = new Date(a.submittedAt).getTime();
       vb = new Date(b.submittedAt).getTime();
+    } else if (sortKey === 'lastActivityAt') {
+      va = new Date(a.lastActivityAt || a.submittedAt).getTime();
+      vb = new Date(b.lastActivityAt || b.submittedAt).getTime();
     } else if (sortKey === 'photos') {
       va = a.photoCount || 0;
       vb = b.photoCount || 0;
@@ -217,7 +221,7 @@ function setSort(key) {
     sortDir = sortDir === 'asc' ? 'desc' : 'asc';
   } else {
     sortKey = key;
-    sortDir = key === 'submittedAt' ? 'desc' : 'asc';
+    sortDir = (key === 'submittedAt' || key === 'lastActivityAt') ? 'desc' : 'asc';
   }
   renderSubmissions(submissions);
 }
@@ -243,7 +247,7 @@ function renderSubmissions(subs) {
   tbody.innerHTML = '';
 
   // Update header sort indicators
-  ['name', 'submittedAt', 'photos'].forEach(key => {
+  ['name', 'submittedAt', 'lastActivityAt', 'photos'].forEach(key => {
     const th = $(`th-${key}`);
     if (!th) return;
     const arrow = th.querySelector('.sort-arrow');
@@ -255,7 +259,7 @@ function renderSubmissions(subs) {
   });
 
   if (!subs.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No submissions yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">No submissions yet</td></tr>';
     return;
   }
 
@@ -271,9 +275,11 @@ function renderSubmissions(subs) {
       `<div class="prompt-dot${completed.includes(n) ? ' done' : ''}">${n}</div>`
     ).join('');
 
+    const lastActivity = sub.lastActivityAt || sub.submittedAt;
     tr.innerHTML = `
       <td><strong>${sub.firstName} ${sub.lastName}</strong></td>
       <td style="white-space:nowrap;">${formatDatetime(sub.submittedAt)}</td>
+      <td style="white-space:nowrap;">${formatDatetime(lastActivity)}</td>
       <td><div class="prompt-dots">${dotsHtml}</div></td>
       <td>${sub.photoCount || 0}</td>
       <td><button class="btn btn-danger btn-sm" style="padding:0.2rem 0.5rem;font-size:0.75rem;min-width:auto;" onclick="event.stopPropagation(); deleteSubmission('${sub.identifier}', '${sub.firstName} ${sub.lastName}')">Delete</button></td>
@@ -286,7 +292,7 @@ function renderSubmissions(subs) {
     const expandTr = document.createElement('tr');
     expandTr.id = `expand-${sub.identifier}`;
     expandTr.style.display = 'none';
-    expandTr.innerHTML = '<td colspan="6"><div class="expanded-row-inner" style="padding:1rem 0;color:var(--text-muted);font-size:0.85rem;">Loading details...</div></td>';
+    expandTr.innerHTML = '<td colspan="7"><div class="expanded-row-inner" style="padding:1rem 0;color:var(--text-muted);font-size:0.85rem;">Loading details...</div></td>';
     tbody.appendChild(expandTr);
   });
 }
@@ -752,6 +758,52 @@ async function uploadPhoto() {
     progressWrap.style.display = 'none';
     showError(e.message);
   }
+}
+
+// =============================================
+// ACTIVITY LOG
+// =============================================
+
+const LOG_TYPE_LABELS = {
+  new_account: { label: 'New account', icon: '👤' },
+  clip_upload: { label: 'Clip uploaded', icon: '🎬' },
+  photo_upload: { label: 'Photo uploaded', icon: '🖼️' },
+  admin_login: { label: 'Admin logged in', icon: '🔐' },
+  user_login: { label: 'Logged in', icon: '🔑' },
+};
+
+async function loadActivityLog() {
+  const container = $('activity-log-list');
+  container.innerHTML = '<p class="muted" style="font-size:0.85rem;">Loading...</p>';
+  try {
+    const logs = await apiFetch('/admin/activity-log?limit=100');
+    renderActivityLog(logs);
+  } catch (e) {
+    container.innerHTML = `<p class="muted" style="font-size:0.85rem;">Error: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function renderActivityLog(logs) {
+  const container = $('activity-log-list');
+  if (!logs.length) {
+    container.innerHTML = '<p class="muted" style="font-size:0.85rem;">No activity yet.</p>';
+    return;
+  }
+
+  container.innerHTML = logs.map(entry => {
+    const { label, icon } = LOG_TYPE_LABELS[entry.type] || { label: entry.type, icon: '📋' };
+    const detail = entry.detail ? ` — ${escapeHtml(entry.detail)}` : '';
+    return `
+      <div class="activity-log-entry">
+        <span class="activity-log-icon">${icon}</span>
+        <div class="activity-log-body">
+          <span class="activity-log-name">${escapeHtml(entry.name)}</span>
+          <span class="activity-log-action">${escapeHtml(label)}${detail}</span>
+        </div>
+        <span class="activity-log-time">${formatDatetime(entry.createdAt)}</span>
+      </div>
+    `;
+  }).join('');
 }
 
 // =============================================

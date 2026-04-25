@@ -174,6 +174,17 @@
         </div>
       </div>
 
+      <!-- Activity Log -->
+      <div class="admin-section">
+        <h2>📋 Activity Log</h2>
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" style="width:auto;" onclick="loadActivityLog()">Refresh</button>
+        </div>
+        <div id="activity-log-list" class="activity-log-list">
+          <p class="muted" style="font-size:0.85rem;">Loading...</p>
+        </div>
+      </div>
+
       <!-- Submissions -->
       <div class="admin-section">
         <h2>👥 Submissions</h2>
@@ -182,7 +193,8 @@
             <thead>
               <tr>
                 <th id="th-name" onclick="setSort('name')" style="cursor:pointer;user-select:none;">Name<span class="sort-arrow"> ⇅</span></th>
-                <th id="th-submittedAt" onclick="setSort('submittedAt')" style="cursor:pointer;user-select:none;">Submitted<span class="sort-arrow"> ▼</span></th>
+                <th id="th-submittedAt" onclick="setSort('submittedAt')" style="cursor:pointer;user-select:none;">Registered<span class="sort-arrow"> ⇅</span></th>
+                <th id="th-lastActivityAt" onclick="setSort('lastActivityAt')" style="cursor:pointer;user-select:none;">Last Activity<span class="sort-arrow"> ▼</span></th>
                 <th>Prompts</th>
                 <th id="th-photos" onclick="setSort('photos')" style="cursor:pointer;user-select:none;">Photos<span class="sort-arrow"> ⇅</span></th>
                 <th></th>
